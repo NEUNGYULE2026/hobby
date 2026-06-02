@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>채널마케팅본부 주간 대시보드</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable.css" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- 엑셀 다운로드 (팀별 주요 실적 → 기존 금주/차주 폼) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-row">
+      <div class="brand-mark">
+        <span class="brand-dot"></span>
+        <span class="brand-title">NE능률 · 채널마케팅본부</span>
+      </div>
+      <div class="week-filter">
+        <label for="week-select">주차</label>
+        <select id="week-select" aria-label="주차 선택"></select>
+        <button class="refresh-btn" id="refresh-btn" type="button">새로고침</button>
+      </div>
+    </div>
+    <nav class="tabs-row">
+      <div class="tabs-inner">
+        <a href="#overview">개요</a>
+        <a href="#ceo">CEO 지침</a>
+        <a href="#sales-part1">영업1파트</a>
+        <a href="#sales-part2">영업2파트</a>
+        <a href="#regional">지역세일즈</a>
+        <a href="#decisions-anchor">의사결정 요청</a>
+      </div>
+    </nav>
+  </div>
+
+  <main class="page">
+    <div id="app">
+      <div class="loading">대시보드 데이터를 불러오는 중입니다…</div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
