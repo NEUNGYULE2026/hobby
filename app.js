@@ -15,7 +15,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbxFeKeb-SuaPVg3e_Blvkqk6wUa5YcB54BEbmGib2ku1KmKwa9QLG5cnXvs0aO_WNLi/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbz_2-A6RxEYqm1q3O-IrnksxwfZwwMUgB-meFdH3JLQxTbbOv2aY_5dIomX3YpLZmhE/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -224,16 +224,15 @@ function renderKpis(kpis) {
   if (!el) return;
   el.innerHTML = kpis.map(k => {
     const sm = STATUS_MAP[k.status] || { card: "", badge: "" };
-    // 상태요약 옆에 근거(I열)가 있으면 "상태 - 근거내용" 형태로 표시
-    const badgeText = k.status
-      ? (k.basis ? `${k.status} - ${k.basis}` : k.status)
-      : (k.basis || "");
+    // 상태요약은 배지(배경색)로, 근거(I열)는 배지 바깥 별도 텍스트로 표시
+    const statusHtml = k.status ? `<span class="kpi-badge ${sm.badge}">${escape(k.status)}</span>` : "";
+    const basisHtml  = k.basis  ? `<span class="kpi-basis">${k.status ? " - " : ""}${escape(k.basis)}</span>` : "";
     return `
       <div class="kpi-card ${sm.card}">
         <p class="kpi-name">${escape(k.name)}</p>
         <p class="kpi-value">${escape(k.value)}<span class="unit">${escape(k.unit || "")}</span></p>
         <p class="kpi-desc">${escape(k.desc)}</p>
-        ${badgeText ? `<span class="kpi-badge ${sm.badge}">${escape(badgeText)}</span>` : ""}
+        ${statusHtml}${basisHtml}
       </div>
     `;
   }).join("");
