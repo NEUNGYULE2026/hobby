@@ -15,7 +15,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzVU39N3P2bjsdi03Us8ikF5ZDv21DL2AHyboUoebf_6s9kuuKtGnfmu9knigtfGBEu/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzMvCA_pzrTup9k3IFuqhdUI8pE_eHomWibZKPpxNLKlqKk1DiIJ8apNdjF_lHPDriJ/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
