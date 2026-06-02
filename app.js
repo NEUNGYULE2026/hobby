@@ -224,12 +224,16 @@ function renderKpis(kpis) {
   if (!el) return;
   el.innerHTML = kpis.map(k => {
     const sm = STATUS_MAP[k.status] || { card: "", badge: "" };
+    // 상태요약 옆에 근거(I열)가 있으면 "상태 - 근거내용" 형태로 표시
+    const badgeText = k.status
+      ? (k.basis ? `${k.status} - ${k.basis}` : k.status)
+      : (k.basis || "");
     return `
       <div class="kpi-card ${sm.card}">
         <p class="kpi-name">${escape(k.name)}</p>
         <p class="kpi-value">${escape(k.value)}<span class="unit">${escape(k.unit || "")}</span></p>
         <p class="kpi-desc">${escape(k.desc)}</p>
-        ${k.status ? `<span class="kpi-badge ${sm.badge}">${escape(k.status)}</span>` : ""}
+        ${badgeText ? `<span class="kpi-badge ${sm.badge}">${escape(badgeText)}</span>` : ""}
       </div>
     `;
   }).join("");

@@ -222,6 +222,7 @@ function parseKpis(data, startIdx) {
       unit:   String(row[3] || '').trim(),
       desc:   String(row[4] || '').trim(),
       status: String(row[7] || '').trim(),
+      basis:  String(row[8] || '').trim(),   // I열 = 근거
     });
   }
   return items;
