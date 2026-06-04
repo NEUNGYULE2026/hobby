@@ -242,7 +242,7 @@ function parseMonthlySales(data, startIdx) {
     const a = String(row[0] || '').trim();
     if (a.startsWith('※')) { continue; }
     // 첫 표 라벨
-    if (!tableLabel && a.startsWith('[') && a.endsWith(']') && a.indexOf('월별 마감') === -1) {
+    if (!tableLabel && a.startsWith('[') && a.endsWith(']') && a.indexOf('월마감') === -1) {
       tableLabel = a.slice(1, -1).trim();
     }
     if (a === '팀 / 파트') {
@@ -271,7 +271,7 @@ function parseMonthlySales(data, startIdx) {
       if (isHeaderRow(row)) break;
       const a = String(row[0] || '').trim();
       if (!a) continue;
-      if (a.indexOf('월별 마감 예상매출') !== -1) break;
+      if (a.indexOf('월마감 예상매출') !== -1) break;
       if (a.startsWith('[') && a.endsWith(']')) continue;
       if (a.startsWith('📌') || a.startsWith('※')) continue;
       const isSubtotal = a.indexOf('합계') !== -1 && a !== '합계';
@@ -297,7 +297,7 @@ function parseMonthlySales(data, startIdx) {
       const row = data[i];
       if (isHeaderRow(row)) break;
       const a = String(row[0] || '').trim();
-      if (a.indexOf('월별 마감 예상매출 합계') !== -1) {
+      if (a.indexOf('월마감 예상매출 합계') !== -1) {
         forecastTotal = {
           label: a,
           target:   toNumber(row[3]),

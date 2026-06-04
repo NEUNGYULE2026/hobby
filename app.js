@@ -15,7 +15,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbz_2-A6RxEYqm1q3O-IrnksxwfZwwMUgB-meFdH3JLQxTbbOv2aY_5dIomX3YpLZmhE/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxEEtLkr4XIxKJoz9geaLVSAZk0PniNm7DMctCOvgyQyrqXOAc5Vo0ZpkMFa-YWcjJS/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -259,11 +259,26 @@ function renderMonthlySales(ms) {
     return "";
   };
 
-  // 진척율 셀 안에 (비고가 있을 때) ⓘ 아이콘 + 툴팁 삽입
-  function pctCell(v, remark, cls) {
-    const pctText = fmtPct(v);
-    const info = remark ? `<span class="info-icon" tabindex="0" data-tip="${escape(remark)}" aria-label="비고">i</span>` : "";
-    return `<td class="num ${cls}">${pctText}${info}</td>`;
+  const nz = s => String(s == null ? "" : s).trim();
+  function pctCell(v, cls) {
+    return `<td class="num ${cls}">${fmtPct(v)}</td>`;
+  }
+
+  // ── 증감사유(비고) ──
+  // 일반/합계 행: 자기 비고. 월마감 예상매출 합계 행: 영업1(지사)·영업2(총판) 비고 합산.
+  const _p1 = rows.find(r => r.label && r.label.indexOf('영업1파트') !== -1);
+  const _p2 = rows.find(r => r.label && r.label.indexOf('영업2파트') !== -1);
+  const _fLines = [];
+  if (_p1 && nz(_p1.remark)) _fLines.push('(지사) ' + nz(_p1.remark));
+  if (_p2 && nz(_p2.remark)) _fLines.push('(총판) ' + nz(_p2.remark));
+  const forecastReason = _fLines.join('\n');
+  const showReason = rows.some(r => nz(r.remark)) || !!forecastReason;
+  const REASON_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>`;
+  function reasonCell(text) {
+    if (!showReason) return "";
+    const t = nz(text);
+    if (!t) return `<td class="reason-cell"></td>`;
+    return `<td class="reason-cell"><button class="reason-btn" type="button" data-reason="${escape(t)}" aria-label="증감사유 보기" title="증감사유">${REASON_ICON}</button></td>`;
   }
 
   // 표 라벨은 시트의 [...] 라벨이 있으면 그걸 우선 사용, 없으면 섹션 제목
@@ -281,7 +296,8 @@ function renderMonthlySales(ms) {
       <td class="num">${fmt2(r.shipped)}</td>
       <td class="num">${fmt2(r.returns)}</td>
       <td class="num">${fmt2(r.net)}</td>
-      ${pctCell(r.progress, r.remark, r.type === 'normal' ? pctCls(r.progress) : '')}
+      ${pctCell(r.progress, r.type === 'normal' ? pctCls(r.progress) : '')}
+      ${reasonCell(r.remark)}
     </tr>
   `).join("");
 
@@ -290,12 +306,13 @@ function renderMonthlySales(ms) {
     const ft = ms.forecastTotal;
     bodyRows += `
       <tr class="forecast-total">
-        <td>${escape(ft.label || "월별 마감 예상매출 합계")}</td>
+        <td>${escape(ft.label || "월마감 예상매출 합계")}</td>
         <td class="num">${fmt2(ft.target)}</td>
         <td class="num">${fmt2(ft.shipped)}</td>
         <td class="num">${fmt2(ft.returns)}</td>
         <td class="num">${fmt2(ft.net)}</td>
-        ${pctCell(ft.progress, ft.remark, '')}
+        ${pctCell(ft.progress, '')}
+        ${reasonCell(forecastReason)}
       </tr>
     `;
   }
@@ -304,10 +321,9 @@ function renderMonthlySales(ms) {
     <div class="sales-block">
       <h3>${escape(tableTitle)}</h3>
       <table class="sales-table">
-        <colgroup>
-          <col style="width: 32%"/><col style="width: 14%"/><col style="width: 12%"/>
-          <col style="width: 12%"/><col style="width: 15%"/><col style="width: 15%"/>
-        </colgroup>
+        <colgroup>${showReason
+          ? `<col style="width:27%"/><col style="width:13%"/><col style="width:11%"/><col style="width:11%"/><col style="width:13%"/><col style="width:13%"/><col style="width:12%"/>`
+          : `<col style="width:32%"/><col style="width:14%"/><col style="width:12%"/><col style="width:12%"/><col style="width:15%"/><col style="width:15%"/>`}</colgroup>
         <thead><tr>
           <th>${escape(h.team)}</th>
           <th class="num">${escape(h.target)}</th>
@@ -315,12 +331,44 @@ function renderMonthlySales(ms) {
           <th class="num">${escape(h.returns)}</th>
           <th class="num">${escape(h.net)}</th>
           <th class="num">${escape(h.progress)}</th>
+          ${showReason ? `<th class="reason-col">증감사유</th>` : ""}
         </tr></thead>
         <tbody>${bodyRows}</tbody>
       </table>
       ${ms.note ? `<div class="sales-note">${escape(ms.note)}</div>` : ""}
     </div>
   `;
+
+  el.querySelectorAll('.reason-btn').forEach(btn => {
+    btn.addEventListener('click', () => openReasonModal(btn.getAttribute('data-reason')));
+  });
+}
+
+// 증감사유 레이어창 — 비고 내용을 표 본문과 동일한 폰트 크기로 표시
+function openReasonModal(text) {
+  let modal = document.getElementById('reason-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'reason-modal';
+    modal.className = 'reason-modal';
+    modal.innerHTML = `
+      <div class="reason-modal-backdrop"></div>
+      <div class="reason-modal-box" role="dialog" aria-modal="true" aria-label="증감사유">
+        <div class="reason-modal-head">
+          <span class="reason-modal-title">증감사유</span>
+          <button class="reason-modal-close" type="button" aria-label="닫기">&times;</button>
+        </div>
+        <div class="reason-modal-body"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    const close = () => modal.classList.remove('open');
+    modal.querySelector('.reason-modal-backdrop').addEventListener('click', close);
+    modal.querySelector('.reason-modal-close').addEventListener('click', close);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  }
+  modal.querySelector('.reason-modal-body').textContent = text || "";
+  modal.classList.add('open');
 }
 
 function buildTeamSections(teams) {
