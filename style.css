@@ -875,3 +875,18 @@ a { color: inherit; text-decoration: none; }
 .team-block-solo .item-card { background: #FBFDFF; }
 .team-block-solo .item-card.is-star { background: linear-gradient(90deg, var(--star-bg-1) 0%, var(--star-bg-2) 60%, #FBFDFF 100%); }
 .sales-table th { background: #EDF5FA; color: var(--brand-deep); }
+
+
+/* ============================================================
+ * v3.8 추가 — KPI 근거: 상태 배지 바깥 별도 텍스트 (배경색 미적용)
+ * ============================================================ */
+.kpi-basis {
+  margin-left: 6px;
+  font-size: 12px;          /* 설명(.kpi-desc)과 동일 크기 */
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--text-soft);
+  vertical-align: middle;
+  letter-spacing: -0.01em;
+  word-break: keep-all;
+}
