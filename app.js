@@ -15,7 +15,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbxEEtLkr4XIxKJoz9geaLVSAZk0PniNm7DMctCOvgyQyrqXOAc5Vo0ZpkMFa-YWcjJS/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbywUzNCHqSskmxuUmSW4ALPPvCTnEc_xNARg-095x8M8Jkcu6GDxm5N8asqM58z-B74/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -265,12 +265,11 @@ function renderMonthlySales(ms) {
   }
 
   // ── 증감사유(비고) ──
-  // 일반/합계 행: 자기 비고. 월마감 예상매출 합계 행: 영업1(지사)·영업2(총판) 비고 합산.
-  const _p1 = rows.find(r => r.label && r.label.indexOf('영업1파트') !== -1);
-  const _p2 = rows.find(r => r.label && r.label.indexOf('영업2파트') !== -1);
+  // 일반/합계 행: 자기 비고. 월마감 예상매출 합계 행: 마감 예상매출 표의 영업1(지사)·영업2(총판) 비고 합산.
+  const _ft0 = ms.forecastTotal || {};
   const _fLines = [];
-  if (_p1 && nz(_p1.remark)) _fLines.push('(지사) ' + nz(_p1.remark));
-  if (_p2 && nz(_p2.remark)) _fLines.push('(총판) ' + nz(_p2.remark));
+  if (nz(_ft0.part1Remark)) _fLines.push('(지사) ' + nz(_ft0.part1Remark));
+  if (nz(_ft0.part2Remark)) _fLines.push('(총판) ' + nz(_ft0.part2Remark));
   const forecastReason = _fLines.join('\n');
   const showReason = rows.some(r => nz(r.remark)) || !!forecastReason;
   const REASON_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>`;

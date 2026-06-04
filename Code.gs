@@ -292,11 +292,16 @@ function parseMonthlySales(data, startIdx) {
   normalizeMonthlySalesRows(rows);
 
   let forecastTotal = null;
+  let fcPart1 = '', fcPart2 = '';
   if (secondHeaderRow >= 0) {
     for (let i = secondHeaderRow + 1; i < data.length; i++) {
       const row = data[i];
       if (isHeaderRow(row)) break;
       const a = String(row[0] || '').trim();
+      if (!a) continue;
+      // 마감 예상매출 표의 파트별 비고(I열) 수집 — 합계행 증감사유 합산용
+      if (a.indexOf('영업1파트') !== -1) { if (!fcPart1) fcPart1 = String(row[8] || '').trim(); }
+      else if (a.indexOf('영업2파트') !== -1) { if (!fcPart2) fcPart2 = String(row[8] || '').trim(); }
       if (a.indexOf('월마감 예상매출 합계') !== -1) {
         forecastTotal = {
           label: a,
@@ -306,6 +311,8 @@ function parseMonthlySales(data, startIdx) {
           net:      toNumber(row[6]),
           progress: toNumber(row[7]),
           remark:   String(row[8] || '').trim(),
+          part1Remark: fcPart1,
+          part2Remark: fcPart2,
         };
         break;
       }
