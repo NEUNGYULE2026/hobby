@@ -1082,3 +1082,18 @@ a { color: inherit; text-decoration: none; }
  * ============================================================ */
 .kpi-bar-meta{font-size:11.5px;color:var(--text-soft);}
 .kpi-bar-meta b{color:var(--text-strong);font-weight:700;}
+
+
+/* ============================================================
+ * v4.5 — 결과 일괄 확정형(레이아웃 X): 확정시점 배너 + 단계 스텝
+ * ============================================================ */
+.kpi-due{font-size:11.5px;color:var(--brand-deep);background:var(--brand-pale);border-radius:6px;padding:6px 9px;margin:9px 0 11px;line-height:1.45;}
+.stepper{display:flex;align-items:flex-start;margin:0 0 12px;}
+.stepper .step{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;color:var(--text-faded);text-align:center;flex:0 0 auto;width:60px;}
+.stepper .step i{width:14px;height:14px;border-radius:50%;background:#D9E4EC;display:block;}
+.stepper .step.done{color:var(--brand-deep);}
+.stepper .step.done i{background:var(--brand);}
+.stepper .step.cur{color:var(--brand-deep);font-weight:700;}
+.stepper .step.cur i{background:#fff;border:3px solid var(--brand);}
+.stepper .seg{flex:1 1 auto;height:2px;background:#D9E4EC;margin-top:6px;}
+.stepper .seg.done{background:var(--brand);}

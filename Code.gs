@@ -208,22 +208,51 @@ function parseKpis(data, startIdx) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const items = [];
   let inTable = false;
+  // 컬럼 인덱스: 기본값(C목표·D현재·E단위·F현단계·G레이아웃·H세부보기) → 헤더 라벨로 동적 갱신
+  const col = { target:2, current:3, unit:4, stage:5, layout:6, detail:7, due:-1, stages:-1 };
   for (let i = startIdx + 1; i < data.length; i++) {
     const row = data[i];
     if (isHeaderRow(row)) break;
     const a = String(row[0] || '').trim();
-    if (a === '지표명칭') { inTable = true; continue; }
+    if (a === '지표명칭') {
+      inTable = true;
+      for (let c = 1; c < row.length; c++) {
+        const h = String(row[c] || '').trim();
+        if (!h) continue;
+        if (h.indexOf('확정') !== -1)        col.due = c;
+        else if (h.indexOf('현단계') !== -1) col.stage = c;
+        else if (h.indexOf('단계') !== -1)   col.stages = c;
+        else if (h.indexOf('레이아웃') !== -1) col.layout = c;
+        else if (h.indexOf('세부') !== -1)   col.detail = c;
+        else if (h.indexOf('단위') !== -1)   col.unit = c;
+        else if (h.indexOf('현재') !== -1 || h.indexOf('실적') !== -1) col.current = c;
+        else if (h.indexOf('목표') !== -1)   col.target = c;
+      }
+      continue;
+    }
     if (!inTable) continue;
     if (!a) continue;
-    const target  = toNumber(row[2]);                          // C 목표
-    const current = toNumber(row[3]);                          // D 현재(실적)
-    const unit    = String(row[4] || '').trim();               // E 단위
-    const stage   = String(row[5] || '').trim();               // F 현단계 (구 상태요약)
-    const layout  = String(row[6] || '').trim().toUpperCase(); // G 레이아웃 (O/X)
-    const sheetName = String(row[7] || '').trim();             // H 세부보기 = 시트명
+    const target  = toNumber(row[col.target]);
+    const current = toNumber(row[col.current]);
+    const unit    = String(row[col.unit] || '').trim();
+    const stage   = String(row[col.stage] || '').trim();
+    const layout  = String(row[col.layout] || '').trim().toUpperCase();
+    const sheetName = String(row[col.detail] || '').trim();
     if (target == null && current == null && !unit && !stage) continue;
     const rate = (target != null && target !== 0 && current != null)
       ? Math.round(current / target * 100) : null;
+    const dueLabel = (col.due >= 0) ? String(row[col.due] || '').trim() : '';
+    let stages = [], stageCurrent = -1;
+    if (col.stages >= 0) {
+      const raw = String(row[col.stages] || '').trim();
+      if (raw) {
+        raw.split(/[\/\n,]/).map(function(x){ return x.trim(); }).filter(Boolean).forEach(function(x, idx){
+          if (x.indexOf('*') !== -1) stageCurrent = idx;
+          stages.push(x.replace(/\*/g, '').trim());
+        });
+        if (stageCurrent < 0 && stages.length) stageCurrent = 0;
+      }
+    }
     items.push({
       name: a,
       target: target,
@@ -234,6 +263,9 @@ function parseKpis(data, startIdx) {
       rate: rate,
       detailSheet: sheetName,
       detail: sheetName ? readDetailSheet(ss, sheetName) : null,
+      dueLabel: dueLabel,
+      stages: stages,
+      stageCurrent: stageCurrent,
     });
   }
   return items;

@@ -15,7 +15,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbymC0JC2O7TjCRUi1UI-47Ur7AP_3gTTFq8ilqCsUxSgy0k56KpOdouBdegRzVu_5KQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwhWjj5NymrowclQBnyn-4iAEFmxKEA2L0_pOJp__-SduUF9Iw60UblptYzDAjJ3aBX/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -221,21 +221,32 @@ const STATUS_MAP = {
 
 function fmtNum(n){ return (n==null) ? "-" : Number(n).toLocaleString("ko-KR"); }
 
+function stepperHtml(stages, cur) {
+  return `<div class="stepper">` + stages.map((s, idx) => {
+    const cls = idx < cur ? "done" : (idx === cur ? "cur" : "todo");
+    const seg = idx < stages.length - 1 ? `<span class="seg ${idx < cur ? "done" : ""}"></span>` : "";
+    return `<span class="step ${cls}"><i></i>${escape(s)}</span>${seg}`;
+  }).join("") + `</div>`;
+}
+
 function renderKpis(kpis) {
   const el = document.getElementById("kpis");
   if (!el) return;
   el.innerHTML = kpis.map((k, i) => {
-    const stageChip = k.stage ? `<span class="kpi-stage">${escape(k.stage)}</span>` : "";
+    const showStage = !(k.layout === "static" && k.stages && k.stages.length);
+    const stageChip = (k.stage && showStage) ? `<span class="kpi-stage">${escape(k.stage)}</span>` : "";
     const hasDetail = !!(k.detail && k.detail.length);
     const detailBtn = hasDetail ? `<button class="detail-btn" type="button" data-i="${i}">🔍 세부보기</button>` : "";
     let body;
     if (k.layout === "static") {
-      // 레이아웃 X — 결과 일괄 확정형: 달성률 막대 없이 최종 목표 + 현단계만
+      // 레이아웃 X — 결과 일괄 확정형: 최종 목표 + (확정시점 배너) + (단계 스텝)
+      const due = k.dueLabel ? `<div class="kpi-due">📌 ${escape(k.dueLabel)}</div>` : "";
+      const steps = (k.stages && k.stages.length) ? stepperHtml(k.stages, k.stageCurrent) : "";
       body = `
         <div class="kpi-value">
           <span class="now">${fmtNum(k.target)}<span class="unit">${escape(k.unit || "")}</span></span>
           <span class="goal-tag">최종 목표</span>
-        </div>`;
+        </div>${due}${steps}`;
     } else {
       const rate = (k.rate == null) ? 0 : k.rate;
       const barW = Math.max(0, Math.min(100, rate));
