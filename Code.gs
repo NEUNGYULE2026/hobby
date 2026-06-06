@@ -448,32 +448,53 @@ function parseTeamItems(data, startIdx) {
     netimes:  { code: 'netimes',  name: 'NE Times팀',     items: [] },
   };
   let inTable = false;
+  // 컬럼 인덱스: 기본값(기존 고정 위치) → '노출설정' 헤더 행에서 라벨로 동적 갱신
+  const col = { team:1, task:2, progress:3, purpose:4, start:5, end:6, note:7, delay:8, upcoming:9, basis:-1 };
   for (let i = startIdx + 1; i < data.length; i++) {
     const row = data[i];
     if (isHeaderRow(row)) break;
     const a = String(row[0] || '').trim();
-    if (a === '노출설정') { inTable = true; continue; }
+    if (a === '노출설정') {
+      inTable = true;
+      // 헤더 라벨로 컬럼 매핑(열 추가/이동·판단근거 열 위치 무관). '근거'를 '진척'보다 먼저 판정.
+      for (let c = 0; c < row.length; c++) {
+        const h = String(row[c] || '').trim();
+        if (!h) continue;
+        if (h.indexOf('근거') !== -1)      col.basis = c;
+        else if (h.indexOf('진척') !== -1) col.progress = c;
+        else if (h.indexOf('업무') !== -1) col.task = c;
+        else if (h.indexOf('목적') !== -1) col.purpose = c;
+        else if (h.indexOf('시작') !== -1) col.start = c;
+        else if (h.indexOf('종료') !== -1) col.end = c;
+        else if (h.indexOf('진행') !== -1) col.note = c;
+        else if (h.indexOf('지연') !== -1) col.delay = c;
+        else if (h.indexOf('예정') !== -1) col.upcoming = c;
+        else if (h.indexOf('팀') !== -1)   col.team = c;
+      }
+      continue;
+    }
     if (!inTable) continue;
     if (!isShown(row[0])) continue;
-    const teamLabel = String(row[1] || '').trim();
+    const teamLabel = String(row[col.team] || '').trim();
     if (!teamLabel) continue;
     const resolved = resolveTeamPart(teamLabel);
     if (!resolved) continue;
-    const title = String(row[2] || '').trim();
+    const title = String(row[col.task] || '').trim();
     if (!title) continue;
     const isStar = /^\s*\[★\]\s*/.test(title) || /^\s*★\s*/.test(title);
     const titleClean = title.replace(/^\s*\[★\]\s*/, '').replace(/^\s*★\s*/, '').trim();
     teams[resolved.key].items.push({
-      title:        titleClean,
-      part:         resolved.part,
-      isStar:       isStar,
-      progress:     parseProgress(row[3]),
-      purpose:      String(row[4] || '').trim(),   // E 목적
-      startDate:    fmtDate(row[5]),                // F 시작일
-      endDate:      fmtDate(row[6]),                // G 종료일
-      progressNote: String(row[7] || '').trim(),   // H 진행사항(금주)
-      delay:        String(row[8] || '').trim(),   // I 지연사유
-      upcoming:     String(row[9] || '').trim(),   // J 예정사항(차주)
+      title:         titleClean,
+      part:          resolved.part,
+      isStar:        isStar,
+      progress:      parseProgress(row[col.progress]),
+      purpose:       String(row[col.purpose] || '').trim(),
+      startDate:     fmtDate(row[col.start]),
+      endDate:       fmtDate(row[col.end]),
+      progressNote:  String(row[col.note] || '').trim(),
+      delay:         String(row[col.delay] || '').trim(),
+      upcoming:      String(row[col.upcoming] || '').trim(),
+      progressBasis: (col.basis >= 0) ? String(row[col.basis] || '').trim() : '',
     });
   }
   return teams;

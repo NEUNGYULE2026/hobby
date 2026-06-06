@@ -15,7 +15,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbxZCZGxQeEnEBBe0DUcoAAn3JUXfZZ_aaQv3HPVlqR7B9vnLK7SbNOsWpQ48HdFVq7N/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbymC0JC2O7TjCRUi1UI-47Ur7AP_3gTTFq8ilqCsUxSgy0k56KpOdouBdegRzVu_5KQ/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -486,6 +486,41 @@ function renderTeams(sections) {
         </div>
       </section>
     `).join("");
+
+  el.querySelectorAll(".basis-i").forEach(b => {
+    const open = () => openProgressBasis(b.dataset.task, b.dataset.pct, b.dataset.basis);
+    b.addEventListener("click", open);
+    b.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+  });
+}
+
+// 진척율 판단근거 레이어창 (타이틀 고정 + 본문 세로 스크롤)
+function openProgressBasis(task, pct, basis) {
+  let m = document.getElementById("progress-basis-modal");
+  if (!m) {
+    m = document.createElement("div");
+    m.id = "progress-basis-modal";
+    m.className = "reason-modal";
+    m.innerHTML = `
+      <div class="reason-modal-backdrop"></div>
+      <div class="reason-modal-box" role="dialog" aria-modal="true" aria-label="진척율 판단근거">
+        <div class="reason-modal-head">
+          <span class="reason-modal-title">진척율 판단근거</span>
+          <button class="reason-modal-close" type="button" aria-label="닫기">&times;</button>
+        </div>
+        <div class="reason-modal-pct"></div>
+        <div class="reason-modal-body"></div>
+      </div>`;
+    document.body.appendChild(m);
+    const close = () => m.classList.remove("open");
+    m.querySelector(".reason-modal-backdrop").addEventListener("click", close);
+    m.querySelector(".reason-modal-close").addEventListener("click", close);
+    document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+  }
+  m.querySelector(".reason-modal-title").textContent = "진척율 판단근거 — " + (task || "");
+  m.querySelector(".reason-modal-pct").textContent = "현재 진척율 " + (pct || 0) + "%";
+  m.querySelector(".reason-modal-body").textContent = basis || "";
+  m.classList.add("open");
 }
 
 // 부서별 주간 보고 — 파트별 표(업무·목적·시작일·종료일·진척율·진행사항·지연사유·예정사항)
@@ -502,7 +537,7 @@ function renderDeptTable(items) {
         <td class="c-purpose">${cell(it.purpose)}</td>
         <td class="c-date">${escape(it.startDate || "") || "-"}</td>
         <td class="c-date">${escape(it.endDate || "") || "-"}</td>
-        <td class="c-prog"><div class="pgauge"><div class="pgauge-bar"><div class="pgauge-fill ${p >= 100 ? "full" : ""}" style="height:${p}%"></div></div><span class="pgauge-pct">${p}%</span></div></td>
+        <td class="c-prog"><div class="pgauge"><div class="pgauge-bar"><div class="pgauge-fill ${p >= 100 ? "full" : ""}" style="height:${p}%"></div></div><span class="pgauge-pct">${p}%${(it.progressBasis && String(it.progressBasis).trim()) ? ` <span class="basis-i" role="button" tabindex="0" title="진척율 판단근거" aria-label="진척율 판단근거" data-task="${escape(titleClean)}" data-pct="${p}" data-basis="${escape(it.progressBasis)}">i</span>` : ""}</span></div></td>
         <td class="c-note">${cell(it.progressNote)}</td>
         <td class="c-delay">${cell(it.delay)}</td>
         <td class="c-next">${cell(it.upcoming)}</td>
