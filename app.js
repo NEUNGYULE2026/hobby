@@ -22,7 +22,7 @@ let navClickGuard = 0;
 let LAST_DATA = null;
 
 const TEAM_SECTIONS = [
-  { key: 'sales-part1', team: 'sales', part: '영업1파트', title: '수도권세일즈팀 · 영업1파트', summary: '수도권 직영·지사 영업 핵심 실행', cls: 't-sales' },
+  { key: 'sales-part1', team: 'sales', part: '영업1파트', title: '수도권세일즈팀 · 영업1파트', summary: '지사 채권·채널 영업 및 공교육 영업 실행', cls: 't-sales' },
   { key: 'sales-part2', team: 'sales', part: '영업2파트', title: '수도권세일즈팀 · 영업2파트', summary: '총판 채권·채널 영업 실행', cls: 't-sales' },
   { key: 'regional', team: 'regional', part: '', title: '지역세일즈팀', summary: '지역 영업 + 학원 DB 확보 + 공교육 진입', cls: 't-regional' },
 ];
