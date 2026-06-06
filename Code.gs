@@ -205,6 +205,7 @@ function parseMessages(data, startIdx) {
 
 function parseKpis(data, startIdx) {
   if (startIdx == null) return [];
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
   const items = [];
   let inTable = false;
   for (let i = startIdx + 1; i < data.length; i++) {
@@ -214,18 +215,46 @@ function parseKpis(data, startIdx) {
     if (a === '지표명칭') { inTable = true; continue; }
     if (!inTable) continue;
     if (!a) continue;
-    const value = row[2];
-    if (value === '' || value == null) continue;
+    const target  = toNumber(row[2]);                          // C 목표
+    const current = toNumber(row[3]);                          // D 현재(실적)
+    const unit    = String(row[4] || '').trim();               // E 단위
+    const stage   = String(row[5] || '').trim();               // F 현단계 (구 상태요약)
+    const layout  = String(row[6] || '').trim().toUpperCase(); // G 레이아웃 (O/X)
+    const sheetName = String(row[7] || '').trim();             // H 세부보기 = 시트명
+    if (target == null && current == null && !unit && !stage) continue;
+    const rate = (target != null && target !== 0 && current != null)
+      ? Math.round(current / target * 100) : null;
     items.push({
-      name:   a,
-      value:  String(value).trim(),
-      unit:   String(row[3] || '').trim(),
-      desc:   String(row[4] || '').trim(),
-      status: String(row[7] || '').trim(),
-      basis:  String(row[8] || '').trim(),   // I열 = 근거
+      name: a,
+      target: target,
+      current: current,
+      unit: unit,
+      stage: stage,
+      layout: (layout === 'X') ? 'static' : 'dynamic',
+      rate: rate,
+      detailSheet: sheetName,
+      detail: sheetName ? readDetailSheet(ss, sheetName) : null,
     });
   }
   return items;
+}
+
+// 세부보기 시트(지사/총판/자사물/공교육 등) → 빈 행/열 제거한 2차원 배열(첫 행=헤더)
+function readDetailSheet(ss, name) {
+  try {
+    const sh = ss.getSheetByName(name);
+    if (!sh) return null;
+    let vals = sh.getDataRange().getDisplayValues();
+    vals = vals.filter(function(r){ return r.some(function(c){ return String(c).trim() !== ''; }); });
+    if (!vals.length) return null;
+    let ncol = 0;
+    vals.forEach(function(r){ if (r.length > ncol) ncol = r.length; });
+    const keep = [];
+    for (let c = 0; c < ncol; c++) {
+      if (vals.some(function(r){ return String(r[c] || '').trim() !== ''; })) keep.push(c);
+    }
+    return vals.map(function(r){ return keep.map(function(c){ return String(r[c] == null ? '' : r[c]).trim(); }); });
+  } catch (e) { return null; }
 }
 
 function parseMonthlySales(data, startIdx) {

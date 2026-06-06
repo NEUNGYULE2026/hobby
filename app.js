@@ -15,7 +15,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzTGmptObFopZoP5jU_WH-vXC0tMa33qZJNkYvv6Cv_TbdyEp9ZvQ2-kFHjNGubm_Cp/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxZCZGxQeEnEBBe0DUcoAAn3JUXfZZ_aaQv3HPVlqR7B9vnLK7SbNOsWpQ48HdFVq7N/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -219,23 +219,80 @@ const STATUS_MAP = {
   "신규 진행":         { card: "k-new",  badge: "b-new"  },
 };
 
+function fmtNum(n){ return (n==null) ? "-" : Number(n).toLocaleString("ko-KR"); }
+
 function renderKpis(kpis) {
   const el = document.getElementById("kpis");
   if (!el) return;
-  el.innerHTML = kpis.map(k => {
-    const sm = STATUS_MAP[k.status] || { card: "", badge: "" };
-    // 상태요약은 배지(배경색)로, 근거(I열)는 배지 바깥 별도 텍스트로 표시
-    const statusHtml = k.status ? `<span class="kpi-badge ${sm.badge}">${escape(k.status)}</span>` : "";
-    const basisHtml  = k.basis  ? `<span class="kpi-basis">${k.status ? " - " : ""}${escape(k.basis)}</span>` : "";
+  el.innerHTML = kpis.map((k, i) => {
+    const stageChip = k.stage ? `<span class="kpi-stage">${escape(k.stage)}</span>` : "";
+    const hasDetail = !!(k.detail && k.detail.length);
+    const detailBtn = hasDetail ? `<button class="detail-btn" type="button" data-i="${i}">🔍 세부보기</button>` : "";
+    let body;
+    if (k.layout === "static") {
+      // 레이아웃 X — 결과 일괄 확정형: 달성률 막대 없이 최종 목표 + 현단계만
+      body = `
+        <div class="kpi-value">
+          <span class="now">${fmtNum(k.target)}<span class="unit">${escape(k.unit || "")}</span></span>
+          <span class="goal-tag">최종 목표</span>
+        </div>`;
+    } else {
+      const rate = (k.rate == null) ? 0 : k.rate;
+      const barW = Math.max(0, Math.min(100, rate));
+      body = `
+        <div class="kpi-value">
+          <span class="now">${fmtNum(k.current)}<span class="unit">${escape(k.unit || "")}</span></span>
+          <span class="rate">달성률 ${rate}%</span>
+        </div>
+        <div class="kpi-bar ${barW>=100?"full":""}"><i style="width:${barW}%"></i></div>
+        <div class="kpi-bar-meta"><span>현재 ${fmtNum(k.current)}${escape(k.unit||"")}</span><span>목표 ${fmtNum(k.target)}${escape(k.unit||"")}</span></div>`;
+    }
     return `
-      <div class="kpi-card ${sm.card}">
+      <div class="kpi-card">
         <p class="kpi-name">${escape(k.name)}</p>
-        <p class="kpi-value">${escape(k.value)}<span class="unit">${escape(k.unit || "")}</span></p>
-        <p class="kpi-desc">${escape(k.desc)}</p>
-        ${statusHtml}${basisHtml}
-      </div>
-    `;
+        ${body}
+        <div class="kpi-foot">${stageChip}${detailBtn}</div>
+      </div>`;
   }).join("");
+  el.querySelectorAll(".detail-btn").forEach(b => {
+    b.addEventListener("click", () => openKpiDetail(kpis[+b.dataset.i]));
+  });
+}
+
+// KPI 세부보기 — 세부 시트 내용을 표로 레이어창에 표시(타이틀 고정 + 본문 세로 스크롤)
+function openKpiDetail(k) {
+  let m = document.getElementById("kpi-detail-modal");
+  if (!m) {
+    m = document.createElement("div");
+    m.id = "kpi-detail-modal";
+    m.className = "reason-modal";
+    m.innerHTML = `
+      <div class="reason-modal-backdrop"></div>
+      <div class="reason-modal-box" role="dialog" aria-modal="true" aria-label="세부보기">
+        <div class="reason-modal-head">
+          <span class="reason-modal-title">세부보기</span>
+          <button class="reason-modal-close" type="button" aria-label="닫기">&times;</button>
+        </div>
+        <div class="reason-modal-body"></div>
+      </div>`;
+    document.body.appendChild(m);
+    const close = () => m.classList.remove("open");
+    m.querySelector(".reason-modal-backdrop").addEventListener("click", close);
+    m.querySelector(".reason-modal-close").addEventListener("click", close);
+    document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+  }
+  m.querySelector(".reason-modal-title").textContent = k.name || "세부보기";
+  const rows = k.detail || [];
+  let html;
+  if (rows.length) {
+    const head = rows[0], rest = rows.slice(1);
+    html = `<table class="detail-table"><thead><tr>${head.map(h=>`<th>${escape(h)}</th>`).join("")}</tr></thead>`
+         + `<tbody>${rest.map(r=>`<tr>${r.map(c=>`<td>${escape(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  } else {
+    html = `<p style="color:var(--text-soft);">세부 내용이 없습니다.</p>`;
+  }
+  m.querySelector(".reason-modal-body").innerHTML = html;
+  m.classList.add("open");
 }
 
 /* ============================================================
