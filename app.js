@@ -233,8 +233,7 @@ function renderKpis(kpis) {
   const el = document.getElementById("kpis");
   if (!el) return;
   el.innerHTML = kpis.map((k, i) => {
-    const showStage = (k.layout !== "static");
-    const stageChip = (k.stage && showStage) ? `<span class="kpi-stage">${escape(k.stage)}</span>` : "";
+    const stageChip = k.stage ? `<span class="kpi-stage">${escape(k.stage)}</span>` : "";
     const hasDetail = !!(k.detail && k.detail.length);
     const detailBtn = hasDetail ? `<button class="detail-btn" type="button" data-i="${i}">🔍 세부보기</button>` : "";
     let body;
