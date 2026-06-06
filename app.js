@@ -233,15 +233,21 @@ function renderKpis(kpis) {
   const el = document.getElementById("kpis");
   if (!el) return;
   el.innerHTML = kpis.map((k, i) => {
-    const showStage = !(k.layout === "static" && k.stages && k.stages.length);
+    const showStage = (k.layout !== "static");
     const stageChip = (k.stage && showStage) ? `<span class="kpi-stage">${escape(k.stage)}</span>` : "";
     const hasDetail = !!(k.detail && k.detail.length);
     const detailBtn = hasDetail ? `<button class="detail-btn" type="button" data-i="${i}">🔍 세부보기</button>` : "";
     let body;
     if (k.layout === "static") {
-      // 레이아웃 X — 결과 일괄 확정형: 최종 목표 + (확정시점 배너) + (단계 스텝)
-      const due = k.dueLabel ? `<div class="kpi-due">📌 ${escape(k.dueLabel)}</div>` : "";
-      const steps = (k.stages && k.stages.length) ? stepperHtml(k.stages, k.stageCurrent) : "";
+      // 레이아웃 X — 결과 일괄 확정형. 확정시점/단계: 시트 값 우선, 없으면 임시 하드코딩(추후 시트 연동)
+      let dueLabel = k.dueLabel, stages = k.stages, stageCur = k.stageCurrent;
+      if (!dueLabel && (!stages || !stages.length)) {
+        dueLabel = "2026.11 결과 확정 · 27학년도 학교별 교과서 채택 · 확정 전";
+        stages = ["전략 수립", "현장 영업", "채택 확정"];
+        stageCur = 1;
+      }
+      const due = dueLabel ? `<div class="kpi-due">📌 ${escape(dueLabel)}</div>` : "";
+      const steps = (stages && stages.length) ? stepperHtml(stages, stageCur) : "";
       body = `
         <div class="kpi-value">
           <span class="now">${fmtNum(k.target)}<span class="unit">${escape(k.unit || "")}</span></span>
