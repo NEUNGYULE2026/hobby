@@ -245,7 +245,7 @@ function renderKpis(kpis) {
           <span class="rate">달성률 ${rate}%</span>
         </div>
         <div class="kpi-bar ${barW>=100?"full":""}"><i style="width:${barW}%"></i></div>
-        <div class="kpi-bar-meta"><span>현재 ${fmtNum(k.current)}${escape(k.unit||"")}</span><span>목표 ${fmtNum(k.target)}${escape(k.unit||"")}</span></div>`;
+        <div class="kpi-bar-meta"><span>현재 <b>${fmtNum(k.current)}${escape(k.unit||"")}</b></span><span>목표 <b>${fmtNum(k.target)}${escape(k.unit||"")}</b></span></div>`;
     }
     return `
       <div class="kpi-card">
@@ -533,7 +533,7 @@ function renderDeptTable(items) {
     const p = Math.max(0, Math.min(100, Number(it.progress) || 0));
     return `
       <tr class="${isStar ? "is-star" : ""}">
-        <td class="c-task">${isStar ? '<span class="star-mark" aria-hidden="true">★</span> ' : ""}${escape(titleClean)}${isStar ? ' <span class="key-badge">핵심</span>' : ""}</td>
+        <td class="c-task">${escape(titleClean)}${isStar ? ' <span class="key-badge">핵심</span>' : ""}</td>
         <td class="c-purpose">${cell(it.purpose)}</td>
         <td class="c-date">${escape(it.startDate || "") || "-"}</td>
         <td class="c-date">${escape(it.endDate || "") || "-"}</td>
