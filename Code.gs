@@ -43,7 +43,7 @@ function setupCheckboxes() {
     // 6번 섹션
     let secRow = -1;
     for (let i = 0; i < data.length; i++) {
-      if (/^\s*6\.\s*팀별\s*주요\s*실적/.test(String(data[i][0] || ''))) {
+      if (/^\s*6\.\s*(?:부서별\s*주간\s*보고|팀별\s*주요\s*실적)/.test(String(data[i][0] || ''))) {
         secRow = i; break;
       }
     }
@@ -105,7 +105,7 @@ function doGet(e) {
       kpis:         parseKpis(data, sections['본부 핵심']),
       monthlySales: parseMonthlySales(data, sections['월별 매출현황']),
       ceo:          parseCeoDirective(data, sections['CEO 지침 응답']),
-      teams:        parseTeamItems(data, sections['팀별 주요 실적']),
+      teams:        parseTeamItems(data, sections['부서별 주간 보고']),
       decisions:    parseDecisions(data, sections['의사결정 요청']),
     });
   } catch (err) {
@@ -153,7 +153,7 @@ function findSections(data) {
     '본부 핵심':       /^\s*3\.\s*본부\s*핵심/,
     '월별 매출현황':   /^\s*4\.\s*/,
     'CEO 지침 응답':   /^\s*5\.\s*CEO\s*지침/,
-    '팀별 주요 실적':  /^\s*6\.\s*팀별\s*주요\s*실적/,
+    '부서별 주간 보고':  /^\s*6\.\s*(?:부서별\s*주간\s*보고|팀별\s*주요\s*실적)/,
     '의사결정 요청':   /^\s*7\.\s*의사결정/,
   };
   for (let i = 0; i < data.length; i++) {
@@ -328,6 +328,19 @@ function toNumber(v) {
   return isNaN(n) ? null : n;
 }
 
+// 날짜 → MM.DD 표기 (Date 객체 또는 'YYYY-MM-DD'/'YYYY.MM.DD' 문자열 모두 처리)
+function fmtDate(v) {
+  if (v instanceof Date) {
+    const m = ('0' + (v.getMonth() + 1)).slice(-2);
+    const d = ('0' + v.getDate()).slice(-2);
+    return m + '.' + d;
+  }
+  const s = String(v == null ? '' : v).trim();
+  const mm = s.match(/(\d{1,4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+  if (mm) return ('0' + mm[2]).slice(-2) + '.' + ('0' + mm[3]).slice(-2);
+  return s;
+}
+
 function isAllowedTeamItem(teamLabel) {
   return TEAM_ITEM_ALLOWED.some(re => re.test(teamLabel));
 }
@@ -415,15 +428,16 @@ function parseTeamItems(data, startIdx) {
     const isStar = /^\s*\[★\]\s*/.test(title) || /^\s*★\s*/.test(title);
     const titleClean = title.replace(/^\s*\[★\]\s*/, '').replace(/^\s*★\s*/, '').trim();
     teams[TEAM_KEYS[team]].items.push({
-      title:    titleClean,
-      part:     part,
-      isStar:   isStar,
-      progress: parseProgress(row[3]),
-      goal:     String(row[4] || '').trim(),
-      fact:     String(row[5] || '').trim(),
-      plan:     String(row[6] || '').trim(),
-      gap:      String(row[7] || '').trim(),
-      action:   String(row[8] || '').trim(),
+      title:        titleClean,
+      part:         part,
+      isStar:       isStar,
+      progress:     parseProgress(row[3]),
+      purpose:      String(row[4] || '').trim(),   // E 목적
+      startDate:    fmtDate(row[5]),                // F 시작일
+      endDate:      fmtDate(row[6]),                // G 종료일
+      progressNote: String(row[7] || '').trim(),   // H 진행사항(금주)
+      delay:        String(row[8] || '').trim(),   // I 지연사유
+      upcoming:     String(row[9] || '').trim(),   // J 예정사항(차주)
     });
   }
   return teams;

@@ -15,7 +15,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbywUzNCHqSskmxuUmSW4ALPPvCTnEc_xNARg-095x8M8Jkcu6GDxm5N8asqM58z-B74/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxJJO3Gh2DdYt_N7pFShTvyaKiqIBx1S2XWiap9Jfahuj9ofM2hgT203tNGy8gun9IJ/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -148,7 +148,7 @@ function render(d) {
   if (hasTeams) {
     parts.push(`
       <div class="section-head-row" id="teams-head">
-        <h2 class="section-title" id="teams-anchor">팀별 주요 실적</h2>
+        <h2 class="section-title" id="teams-anchor">부서별 주간 보고</h2>
         <button class="download-btn" id="download-form-btn" type="button" title="현재 보고 있는 주차 데이터를 기존 폼(금주/차주) 엑셀로 다운로드">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -418,18 +418,55 @@ function renderCeo(items) {
 function renderTeams(sections) {
   const el = document.getElementById("teams");
   if (!el) return;
-  el.innerHTML = sections.map(sec => {
-    const cards = sec.items.map(renderItemCard).join("");
-    return `
+  el.innerHTML = sections.map(sec => `
       <section class="team-block team-block-solo" id="${sec.id}">
         <header class="team-header ${sec.cls}">
           <h2>${escape(sec.title)}</h2>
         </header>
-        <div class="team-summary">목적 — ${escape(sec.summary)}</div>
-        <div class="team-body ${sec.cls}">${cards}</div>
+        <div class="team-summary">${escape(sec.summary)}</div>
+        <div class="team-body ${sec.cls}">
+          <div class="dept-table-wrap">${renderDeptTable(sec.items)}</div>
+        </div>
       </section>
-    `;
+    `).join("");
+}
+
+// 부서별 주간 보고 — 파트별 표(업무·목적·시작일·종료일·진척율·진행사항·지연사유·예정사항)
+function renderDeptTable(items) {
+  const cell = s => { const t = String(s == null ? "" : s).trim(); return t ? nlbr(t) : "-"; };
+  const rows = (items || []).map(it => {
+    const title = String(it.title || "");
+    const isStar = it.isStar === true || /^\s*\[★\]\s*/.test(title) || /^\s*★\s*/.test(title);
+    const titleClean = title.replace(/^\s*\[★\]\s*/, "").replace(/^\s*★\s*/, "").trim();
+    const p = Math.max(0, Math.min(100, Number(it.progress) || 0));
+    return `
+      <tr class="${isStar ? "is-star" : ""}">
+        <td class="c-task">${isStar ? '<span class="star-mark" aria-hidden="true">★</span> ' : ""}${escape(titleClean)}${isStar ? ' <span class="key-badge">핵심</span>' : ""}</td>
+        <td class="c-purpose">${cell(it.purpose)}</td>
+        <td class="c-date">${escape(it.startDate || "") || "-"}</td>
+        <td class="c-date">${escape(it.endDate || "") || "-"}</td>
+        <td class="c-prog"><div class="pgauge"><div class="pgauge-bar"><div class="pgauge-fill ${p >= 100 ? "full" : ""}" style="height:${p}%"></div></div><span class="pgauge-pct">${p}%</span></div></td>
+        <td class="c-note">${cell(it.progressNote)}</td>
+        <td class="c-delay">${cell(it.delay)}</td>
+        <td class="c-next">${cell(it.upcoming)}</td>
+      </tr>`;
   }).join("");
+  return `
+    <table class="dept-table">
+      <colgroup>
+        <col style="width:13%"/><col style="width:15%"/><col style="width:7%"/><col style="width:7%"/>
+        <col style="width:7%"/><col style="width:19%"/><col style="width:14%"/><col style="width:18%"/>
+      </colgroup>
+      <thead><tr>
+        <th>업무</th><th>목적</th><th class="c-date">시작일</th><th class="c-date">종료일</th>
+        <th class="c-prog">진척율</th><th>진행사항</th><th>지연사유</th><th>예정사항</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function nlbr(s) {
+  return escape(String(s == null ? "" : s)).replace(/\n/g, "<br>");
 }
 
 function renderItemCard(it) {
@@ -720,18 +757,16 @@ function fmtCur(idx, it) {
   const pct = (typeof it.progress === "number") ? `(${it.progress}%)` : "";
   let head = `${idx}. ${title}`;
   if (pct) head += ` ${pct}`;
-  const fact = _cleanInline(it.fact);
-  if (fact) head += ` - ${fact}`;
+  const cur = _cleanInline(it.progressNote);
+  if (cur) head += ` - ${cur}`;
   const lines = [head];
-  const gap = _cleanInline(it.gap);
-  if (gap)    lines.push(` -이슈 : ${gap}`);
-  const action = _cleanInline(it.action);
-  if (action) lines.push(` -실행 : ${action}`);
+  const delay = _cleanInline(it.delay);
+  if (delay) lines.push(` -지연사유 : ${delay}`);
   return lines.join("\n");
 }
 
 function fmtNext(idx, it) {
   const title = _displayTitle(it);
-  const plan = _cleanInline(it.plan);
-  return plan ? `${idx}. ${title} - ${plan}` : `${idx}. ${title}`;
+  const up = _cleanInline(it.upcoming);
+  return up ? `${idx}. ${title} - ${up}` : `${idx}. ${title}`;
 }
