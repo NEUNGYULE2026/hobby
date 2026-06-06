@@ -345,6 +345,16 @@ function isAllowedTeamItem(teamLabel) {
   return TEAM_ITEM_ALLOWED.some(re => re.test(teamLabel));
 }
 
+// 팀/파트 라벨 → {key, part}. 단축형('영업1파트')과 전체형('수도권세일즈팀 / 영업1파트') 모두 허용.
+function resolveTeamPart(label) {
+  const s = String(label || '').trim();
+  if (!s) return null;
+  if (/영업1파트/.test(s)) return { key: 'sales',    part: '영업1파트' };
+  if (/영업2파트/.test(s)) return { key: 'sales',    part: '영업2파트' };
+  if (/지역세일즈/.test(s)) return { key: 'regional', part: '' };
+  return null;
+}
+
 function normalizeMonthlySalesRows(rows) {
   if (!rows || !rows.length) return rows;
   const detailTeams = new Set(
@@ -418,18 +428,15 @@ function parseTeamItems(data, startIdx) {
     if (!isShown(row[0])) continue;
     const teamLabel = String(row[1] || '').trim();
     if (!teamLabel) continue;
-    if (!isAllowedTeamItem(teamLabel)) continue;
-    const tokens = teamLabel.split('/').map(s => s.trim()).filter(Boolean);
-    const team   = tokens[0] || '';
-    const part   = tokens.slice(1).join(' / ');
-    if (!(team in TEAM_KEYS)) continue;
+    const resolved = resolveTeamPart(teamLabel);
+    if (!resolved) continue;
     const title = String(row[2] || '').trim();
     if (!title) continue;
     const isStar = /^\s*\[★\]\s*/.test(title) || /^\s*★\s*/.test(title);
     const titleClean = title.replace(/^\s*\[★\]\s*/, '').replace(/^\s*★\s*/, '').trim();
-    teams[TEAM_KEYS[team]].items.push({
+    teams[resolved.key].items.push({
       title:        titleClean,
-      part:         part,
+      part:         resolved.part,
       isStar:       isStar,
       progress:     parseProgress(row[3]),
       purpose:      String(row[4] || '').trim(),   // E 목적
