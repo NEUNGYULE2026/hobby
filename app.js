@@ -241,7 +241,7 @@ function renderKpis(kpis) {
       // 레이아웃 X — 결과 일괄 확정형. 확정시점/단계: 시트 값 우선, 없으면 임시 하드코딩(추후 시트 연동)
       let dueLabel = k.dueLabel, stages = k.stages, stageCur = k.stageCurrent;
       if (!dueLabel && (!stages || !stages.length)) {
-        dueLabel = "2026.11 결과 확정 · 27학년도 학교별 교과서 채택 · 확정 전";
+        dueLabel = "2026.12 결과 확정 · 27학년도 학교별 교과서 채택 · 확정 전";
         stages = ["전략 수립", "현장 영업", "채택 확정"];
         stageCur = 1;
       }
