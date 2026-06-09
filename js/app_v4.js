@@ -1,8 +1,5 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.10
- *
- * v3.10 변경
- *  - 공교육 팝업 '근거형'으로 재구성: 26 고2 실적→27 고3 목표 흐름(동일 41.7%) + 한 줄 근거 문장 + 근거 데이터 표만 유지. 요약카드 3개·과목별 막대차트·출처 문구 제거(gonggyoChart 삭제)
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.9
  *
  * v3.9 변경
  *  - 공교육 팝업 재구성: 27학년도 목표 = 26 고2 실적 합계 점유율(41.7%)로 일치 → 요약카드 3번째를 '목표−실적 %p'에서 '목표 달성률 100%'로 교체(목표=실적 명시). gonggyo-data.js target 0.42→0.4173 갱신
@@ -1037,6 +1034,7 @@ function renderTrendChart() {
  * 공교육 점유율 전용 세부보기 — gonggyo-data.js + Chart.js 필요
  *  26학년도 고2 선택과목 실적(점유율) + 27학년도 목표 42% 한눈에
  * ============================================================ */
+let gonggyoChart = null;
 function openGonggyoDetail() {
   const g = GONGGYO;
   const pct = v => (v * 100).toFixed(1) + "%";
@@ -1066,21 +1064,33 @@ function openGonggyoDetail() {
   m.querySelector(".reason-modal-title").textContent = g.title;
   const rows = g.rows.map(r => ({ ...r, share: r.ne / r.all }));
   m.querySelector(".gg-body").innerHTML = `
-    <div class="gg-basis">
-      <div class="gg-flow">
-        <div class="gg-node"><span class="lbl">26학년도 고2<br>동일 선택과목 실적 점유율</span><span class="val">${pct(baseShare)}</span></div>
-        <div class="gg-op"><span class="arr">&rarr;</span><span>그대로<br>목표로 수립</span></div>
-        <div class="gg-node target"><span class="lbl">27학년도 고3<br>점유율 목표</span><span class="val">${pct(g.target)}</span></div>
-      </div>
-      <p class="gg-msg">27학년도 고3 목표 <b>${pct(g.target)}</b>는 임의로 정한 수치가 아닙니다. <b>같은 선택과목을 수강한 직전 학년(26학년도 고2)의 실제 점유율 ${pct(baseShare)}</b>를 그대로 목표로 삼았습니다 &mdash; 즉, <b>직전 실측 실적에 근거한 목표</b>입니다.</p>
+    <div class="gg-note">${escape(g.note)}</div>
+    <div class="gg-sum">
+      <div class="gg-card"><div class="l">27학년도 고3 목표</div><div class="v">${pct(g.target)}</div><div class="s">전체 선택과목 점유율 (= 26 고2 실적 기준)</div></div>
+      <div class="gg-card"><div class="l">26학년도 고2 실적(합계)</div><div class="v">${pct(baseShare)}</div><div class="s">NE ${num(baseNe)} / 출원 ${num(baseAll)}</div></div>
+      <div class="gg-card"><div class="l">목표 달성률</div><div class="v" style="color:var(--status-good)">${(baseShare / g.target * 100).toFixed(1)}%</div><div class="s">목표 = 실적, 동일 기준 수립</div></div>
     </div>
-    <div class="gg-sec-h">산정 근거 &mdash; 26학년도 고2 선택과목 실적</div>
+    <div class="gg-chart"><canvas id="gg-cv"></canvas></div>
     <table class="gg-table">
-      <thead><tr><th>선택과목</th><th>출원사(전체)</th><th>NE능률</th><th>점유율</th></tr></thead>
+      <thead><tr><th>선택과목</th><th class="n">출원사(전체)</th><th class="n">NE능률</th><th class="n">점유율</th></tr></thead>
       <tbody>
-        ${rows.map(r => `<tr><td>${escape(r.subject)}</td><td>${num(r.all)}</td><td>${num(r.ne)}</td><td>${pct(r.share)}</td></tr>`).join("")}
-        <tr class="gg-tot"><td>합계</td><td>${num(baseAll)}</td><td>${num(baseNe)}</td><td>${pct(baseShare)}</td></tr>
+        ${rows.map(r => `<tr><td>${escape(r.subject)}</td><td class="n">${num(r.all)}</td><td class="n">${num(r.ne)}</td><td class="n" style="color:${r.share >= g.target ? '#1F9D67' : 'var(--text-main)'};font-weight:700">${pct(r.share)}</td></tr>`).join("")}
+        <tr class="gg-tot"><td>합계</td><td class="n">${num(baseAll)}</td><td class="n">${num(baseNe)}</td><td class="n">${pct(baseShare)}</td></tr>
       </tbody>
     </table>`;
   m.classList.add("open");
+
+  const sorted = rows.slice().sort((a, b) => b.share - a.share);
+  if (gonggyoChart) gonggyoChart.destroy();
+  gonggyoChart = new Chart(document.getElementById("gg-cv"), {
+    type: "bar",
+    data: { labels: sorted.map(r => r.subject), datasets: [{ label: "점유율",
+      data: sorted.map(r => +(r.share * 100).toFixed(1)),
+      backgroundColor: sorted.map(r => r.share >= g.target ? "#1F9D67" : "#2AA7DA"), borderRadius: 3 }] },
+    options: { indexAxis: "y", responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        title: { display: true, text: "과목별 점유율 (26학년도 고2 실적) · 목표 " + pct(g.target) + " (녹색=목표 이상)", color: "#243B53", font: { size: 12.5, weight: "600" } },
+        tooltip: { callbacks: { label: c => c.parsed.x + "%" } } },
+      scales: { x: { suggestedMax: 70, ticks: { callback: v => v + "%" }, grid: { color: "#EDF2F7" } }, y: { grid: { display: false } } } }
+  });
 }

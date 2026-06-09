@@ -1,7 +1,6 @@
 /* ============================================================
  * 채널마케팅본부 주간 대시보드 v3.1 스타일
  * v3.10 — 세부보기 표 중앙정렬 + 추세 파트구성 범례
- * v3.11 — 공교육 팝업 근거형(실적->목표) 재구성
  * - 컬러 테마: 보라/라벤더
  * - 추가: 파트 그루핑, [★] 핵심 카드, 빈 섹션 자동 숨김
  * ============================================================ */
@@ -1142,29 +1141,4 @@ a { color: inherit; text-decoration: none; }
 .gg-card .v{font-size:21px;font-weight:800;color:var(--text-strong);line-height:1.1;letter-spacing:-0.02em;}
 .gg-card .s{font-size:10.5px;color:var(--text-faded);margin-top:3px;}
 .gg-chart{position:relative;height:230px;margin-bottom:14px;}
-.gg-table{width:100%;border-collapse:collapse;font-size:12.5px;}
-.gg-table th{background:#EDF5FA;color:var(--brand-deep);text-align:left;padding:7px 10px;border-bottom:1px solid var(--border-strong);font-size:12px;}
-.gg-table th.n,.gg-table td.n{text-align:right;}
-.gg-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text-main);}
-.gg-table tr.gg-tot td{background:#EAF7FC;color:#1F5E92;font-weight:700;border-top:2px solid #7FD3F1;border-bottom:none;}
-
-/* ============================================================
- * v3.11 — 공교육 팝업 '근거형' 재구성 (실적->목표 흐름 + 근거표)
- * ============================================================ */
-.gg-basis{background:var(--brand-pale);border:1px solid #CDEBF7;border-radius:14px;padding:18px 18px 16px;margin-bottom:6px;}
-.gg-flow{display:flex;align-items:stretch;gap:12px;}
-.gg-node{flex:1;background:#fff;border:1px solid var(--border);border-radius:11px;padding:13px 14px;text-align:center;}
-.gg-node .lbl{display:block;font-size:11.5px;color:var(--text-soft);margin-bottom:5px;line-height:1.35;}
-.gg-node .val{font-size:30px;font-weight:800;color:var(--brand-deep);letter-spacing:-.03em;line-height:1;}
-.gg-node.target{border-color:var(--brand);box-shadow:0 0 0 3px rgba(42,167,218,.12);}
-.gg-node.target .val{color:var(--brand);}
-.gg-op{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:700;color:var(--brand-deep);white-space:nowrap;min-width:60px;}
-.gg-op .arr{font-size:22px;line-height:1;color:var(--brand);}
-.gg-msg{margin:14px 2px 0;font-size:13px;line-height:1.65;color:var(--text-strong);}
-.gg-msg b{color:var(--brand-deep);font-weight:700;}
-.gg-sec-h{margin:20px 0 9px;font-size:12.5px;font-weight:700;color:var(--text-soft);display:flex;align-items:center;gap:7px;}
-.gg-sec-h::before{content:"";width:3px;height:13px;border-radius:2px;background:var(--brand);}
-.gg-table th,.gg-table td{text-align:center;}
-.gg-table th:first-child,.gg-table td:first-child{text-align:left;color:var(--text-strong);}
-.gg-table tr.gg-tot td:last-child{color:var(--brand);}
-@media(max-width:600px){.gg-flow{flex-direction:column;}.gg-op{flex-direction:row;min-width:0;}.gg-op .arr{transform:rotate(90deg);}}
+.
