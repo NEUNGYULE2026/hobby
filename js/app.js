@@ -1,5 +1,10 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.11
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.12
+ *
+ * v3.12 변경
+ *  - 추세 26년 최종월(현재 진행월) 값을 rawdata 집계 대신 구글시트 매출현황의 파트별 총출고로 동적 교체
+ *    (전체=합계 총출고 / 영업1파트·영업2파트=각 파트 총출고). 25년 및 그 외 월은 trend-data.js 그대로.
+ *    renderMonthlySales에서 trendLastOverride 설정 → effY26()가 최종월만 교체. 캡션도 26년 최종월 기준 안내.
  *
  * v3.11 변경
  *  - 공교육 팝업 문구: 흐름 라벨 '그대로 목표로 수립'->'유지 목표', 근거 문장 간결화(동일 선택과목 기반 26 고2 실적->27 고3 목표 수립)
@@ -349,6 +354,8 @@ function renderMonthlySales(ms) {
   const el = document.getElementById("monthly-sales");
   if (!el) return;
   const rows = ms.rows || [];
+  // 추세 26년 최종월 = 시트 파트별 총출고로 동적 교체 (effY26에서 사용)
+  trendLastOverride = buildTrendOverride(rows);
   if (!rows.length) { el.innerHTML = ""; return; }
   const fmt2 = v => (v === null || v === undefined) ? "-" : Number(v).toFixed(2);
   const fmtPct = v => (v === null || v === undefined) ? "-" : `${(Number(v) * 100).toFixed(1)}%`;
@@ -917,6 +924,38 @@ function fmtNext(idx, it) {
 let trendChart = null;
 const trendState = { g: "전체", p: "월별" };
 
+// 추세 26년 최종월(현재 진행월) 총출고 동적 오버라이드.
+// 구글시트 매출현황의 파트별 총출고를 그룹별로 매핑: { 전체, 영업1파트, 영업2파트 }(억 단위).
+// renderMonthlySales에서 설정. 없으면 trend-data.js 원본 그대로 사용.
+let trendLastOverride = null;
+
+// 매출현황 rows(ms.rows)에서 파트별 총출고(shipped) 추출 → 오버라이드 맵 생성.
+function buildTrendOverride(rows) {
+  if (!Array.isArray(rows) || !rows.length) return null;
+  const ov = {};
+  let partSum = 0, hasPart = false;
+  rows.forEach(r => {
+    const lbl = String(r && r.label != null ? r.label : "");
+    const s = Number(r && r.shipped);
+    if (!isFinite(s)) return;
+    if (/영업\s*1\s*파트/.test(lbl))      { ov["영업1파트"] = s; partSum += s; hasPart = true; }
+    else if (/영업\s*2\s*파트/.test(lbl)) { ov["영업2파트"] = s; partSum += s; hasPart = true; }
+    if (r && r.type === "total")          { ov["전체"] = s; }
+  });
+  // 합계행이 없으면 파트 합으로 전체 보정
+  if (ov["전체"] == null && hasPart) ov["전체"] = partSum;
+  return Object.keys(ov).length ? ov : null;
+}
+
+// 그룹의 26년 시계열에서 최종월만 시트 총출고로 교체한 사본 반환(원본 불변).
+function effY26(group) {
+  const base = (TREND_DATA.series[group] || {}).y26 || [];
+  if (!trendLastOverride || trendLastOverride[group] == null || !base.length) return base;
+  const out = base.slice();
+  out[out.length - 1] = trendLastOverride[group];
+  return out;
+}
+
 // 추세 차트 값 라벨 — 막대/라인 위에 실적 수치(억, 소수1자리) 표기. 데이터셋 색상과 동일.
 const trendValueLabels = {
   id: "trendValueLabels",
@@ -961,7 +1000,7 @@ function buildTrendExpander() {
         </div>
         <div class="trend-chips" id="trend-chips"></div>
         <div class="trend-cw"><canvas id="trend-cv"></canvas></div>
-        <div class="trend-cap">${escape(TREND_DATA.cutNote)} · 기준: ${escape(TREND_DATA.basis)} (6월*은 1~8일 진행분)</div>
+        <div class="trend-cap">${escape(TREND_DATA.cutNote)} · 기준: ${escape(TREND_DATA.basis)} · 26년 최종월은 구글시트 파트별 총출고, 25년 동월은 1~8일 진행분</div>
       </div>
     </div>`;
 }
@@ -1003,17 +1042,19 @@ function renderTrendChips() {
   const el = document.getElementById("trend-chips");
   if (!el) return;
   const d = TREND_DATA.series[trendState.g];
+  const y26 = effY26(trendState.g);
   const sum = a => a.reduce((x, y) => x + y, 0);
   const li = TREND_DATA.months.length - 1;
   el.innerHTML =
-    trendChip("연누적", sum(d.y26), sum(d.y25)) +
-    trendChip(TREND_DATA.months[li], d.y26[li], d.y25[li]);
+    trendChip("연누적", sum(y26), sum(d.y25)) +
+    trendChip(TREND_DATA.months[li], y26[li], d.y25[li]);
 }
 
 function renderTrendChart() {
   const ctx = document.getElementById("trend-cv");
   if (!ctx) return;
   const d = TREND_DATA.series[trendState.g];
+  const y26 = effY26(trendState.g);
   const sum = a => a.reduce((x, y) => x + y, 0);
   const cum = a => a.reduce((acc, v, i) => (acc.push((i ? acc[i - 1] : 0) + v), acc), []);
   const f1 = n => Number(n).toFixed(1);
@@ -1025,12 +1066,12 @@ function renderTrendChart() {
     scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => v + "억" }, grid: { color: "#EDF2F7" } } } });
   if (trendState.p === "연누적") {
     trendChart = new Chart(ctx, { type: "line", data: { labels: TREND_DATA.months, datasets: [
-      { label: "2026 누적", data: cum(d.y26), borderColor: "#1F5E92", backgroundColor: "#1F5E92", borderWidth: 2.5, tension: .25, pointRadius: 3 },
+      { label: "2026 누적", data: cum(y26), borderColor: "#1F5E92", backgroundColor: "#1F5E92", borderWidth: 2.5, tension: .25, pointRadius: 3 },
       { label: "2025 누적", data: cum(d.y25), borderColor: "#D9A325", backgroundColor: "#D9A325", borderWidth: 2, borderDash: [6, 4], tension: .25, pointRadius: 3 }] },
       options: opts("연누적 매출 추이 (26 vs 25)"), plugins: [trendValueLabels] });
   } else {
     trendChart = new Chart(ctx, { type: "bar", data: { labels: TREND_DATA.months, datasets: [
-      { label: "2026", data: d.y26, backgroundColor: "#1F5E92", borderRadius: 3 },
+      { label: "2026", data: y26, backgroundColor: "#1F5E92", borderRadius: 3 },
       { label: "2025", data: d.y25, backgroundColor: "#D9A325", borderRadius: 3 }] },
       options: opts("월별 매출 (26 vs 25)"), plugins: [trendValueLabels] });
   }
