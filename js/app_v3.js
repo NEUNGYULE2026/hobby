@@ -1,8 +1,5 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.9
- *
- * v3.9 변경
- *  - 공교육 팝업 재구성: 27학년도 목표 = 26 고2 실적 합계 점유율(41.7%)로 일치 → 요약카드 3번째를 '목표−실적 %p'에서 '목표 달성률 100%'로 교체(목표=실적 명시). gonggyo-data.js target 0.42→0.4173 갱신
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.8
  *
  * v3.8 변경
  *  - 추세 차트: 막대/라인 위 실적 수치 라벨(억 1자리) 인라인 플러그인 추가
@@ -1066,9 +1063,9 @@ function openGonggyoDetail() {
   m.querySelector(".gg-body").innerHTML = `
     <div class="gg-note">${escape(g.note)}</div>
     <div class="gg-sum">
-      <div class="gg-card"><div class="l">27학년도 고3 목표</div><div class="v">${pct(g.target)}</div><div class="s">전체 선택과목 점유율 (= 26 고2 실적 기준)</div></div>
+      <div class="gg-card"><div class="l">27학년도 목표</div><div class="v">${pct(g.target)}</div><div class="s">전체 선택과목 점유율</div></div>
       <div class="gg-card"><div class="l">26학년도 고2 실적(합계)</div><div class="v">${pct(baseShare)}</div><div class="s">NE ${num(baseNe)} / 출원 ${num(baseAll)}</div></div>
-      <div class="gg-card"><div class="l">목표 달성률</div><div class="v" style="color:var(--status-good)">${(baseShare / g.target * 100).toFixed(1)}%</div><div class="s">목표 = 실적, 동일 기준 수립</div></div>
+      <div class="gg-card"><div class="l">목표 − 실적</div><div class="v" style="color:var(--brand-deep)">+${((g.target - baseShare) * 100).toFixed(1)}%p</div><div class="s">실적 기반 소폭 상향</div></div>
     </div>
     <div class="gg-chart"><canvas id="gg-cv"></canvas></div>
     <table class="gg-table">

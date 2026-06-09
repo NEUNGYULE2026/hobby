@@ -1,6 +1,5 @@
 /* ============================================================
  * 채널마케팅본부 주간 대시보드 v3.1 스타일
- * v3.10 — 세부보기 표 중앙정렬 + 추세 파트구성 범례
  * - 컬러 테마: 보라/라벤더
  * - 추가: 파트 그루핑, [★] 핵심 카드, 빈 섹션 자동 숨김
  * ============================================================ */
@@ -1053,9 +1052,9 @@ a { color: inherit; text-decoration: none; }
 
 /* 세부보기 모달 내부 표 */
 .detail-table{width:100%;border-collapse:collapse;font-size:12.5px;}
-.detail-table th{position:sticky;top:0;background:#EDF5FA;color:var(--brand-deep);text-align:center;
+.detail-table th{position:sticky;top:0;background:#EDF5FA;color:var(--brand-deep);text-align:left;
   padding:8px 10px;border-bottom:1px solid var(--border-strong);white-space:nowrap;}
-.detail-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text-main);text-align:center;}
+.detail-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text-main);}
 .detail-table tr:last-child td{border-bottom:none;}
 
 
@@ -1121,12 +1120,6 @@ a { color: inherit; text-decoration: none; }
 .trend-cw{position:relative;height:280px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;}
 .trend-cap{font-size:11.5px;color:var(--text-faded);margin-top:10px;}
 
-/* v3.10 추가 — 추세 패널: 파트 구성 범례(토글 우측), 막대 값 라벨은 app.js 인라인 플러그인 */
-.trend-legend{margin-left:auto;align-self:center;display:flex;flex-direction:column;gap:2px;
-  font-size:11px;color:var(--text-soft);line-height:1.45;text-align:right;}
-.trend-legend b{color:var(--brand-deep);font-weight:700;}
-@media(max-width:600px){.trend-legend{margin-left:0;text-align:left;align-items:flex-start;width:100%;}}
-
 
 /* ============================================================
  * v4.7 — (고3 영어) 공교육 점유율 전용 세부보기 (공교육.xlsx 기반)
@@ -1141,4 +1134,8 @@ a { color: inherit; text-decoration: none; }
 .gg-card .v{font-size:21px;font-weight:800;color:var(--text-strong);line-height:1.1;letter-spacing:-0.02em;}
 .gg-card .s{font-size:10.5px;color:var(--text-faded);margin-top:3px;}
 .gg-chart{position:relative;height:230px;margin-bottom:14px;}
-.
+.gg-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.gg-table th{background:#EDF5FA;color:var(--brand-deep);text-align:left;padding:7px 10px;border-bottom:1px solid var(--border-strong);font-size:12px;}
+.gg-table th.n,.gg-table td.n{text-align:right;}
+.gg-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text-main);}
+.gg-table tr.gg-tot td{background:#EAF7FC;color:#1F5E92;font-weight:700;border-top:2px solid #7FD3F1;border-bottom:none;}

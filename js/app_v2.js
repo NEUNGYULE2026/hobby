@@ -1,12 +1,5 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.9
- *
- * v3.9 변경
- *  - 공교육 팝업 재구성: 27학년도 목표 = 26 고2 실적 합계 점유율(41.7%)로 일치 → 요약카드 3번째를 '목표−실적 %p'에서 '목표 달성률 100%'로 교체(목표=실적 명시). gonggyo-data.js target 0.42→0.4173 갱신
- *
- * v3.8 변경
- *  - 추세 차트: 막대/라인 위 실적 수치 라벨(억 1자리) 인라인 플러그인 추가
- *  - 추세 패널: 파트 구성 범례 표기(영업1=참고서(영/수/국)+교과서+AIDT, 영업2=B&G+OUP)
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.7
  *
  * v3.7 변경
  *  - (고3 영어) 점유율 카드: 세부보기 버튼을 시트 detailSheet 값과 무관하게 하드코딩 노출(isGonggyoKpi: 카드명 패턴 판정) → 공교육 전용 레이어 연결
@@ -911,30 +904,6 @@ function fmtNext(idx, it) {
 let trendChart = null;
 const trendState = { g: "전체", p: "월별" };
 
-// 추세 차트 값 라벨 — 막대/라인 위에 실적 수치(억, 소수1자리) 표기. 데이터셋 색상과 동일.
-const trendValueLabels = {
-  id: "trendValueLabels",
-  afterDatasetsDraw(chart){
-    const ctx = chart.ctx;
-    ctx.save();
-    ctx.font = "600 10px Pretendard, system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    chart.data.datasets.forEach((ds, di) => {
-      const meta = chart.getDatasetMeta(di);
-      if (meta.hidden) return;
-      const color = (typeof ds.borderColor === "string" ? ds.borderColor : null) || (typeof ds.backgroundColor === "string" ? ds.backgroundColor : "#243B53");
-      ctx.fillStyle = color;
-      meta.data.forEach((el, i) => {
-        const v = ds.data[i];
-        if (v == null) return;
-        ctx.fillText(Number(v).toFixed(1), el.x, el.y - 3);
-      });
-    });
-    ctx.restore();
-  }
-};
-
 function trendAvailable() {
   return (typeof TREND_DATA !== "undefined") && (typeof Chart !== "undefined");
 }
@@ -951,7 +920,6 @@ function buildTrendExpander() {
         <div class="trend-ctrl">
           <div class="tseg" id="tsegG"><button type="button" data-v="전체" class="on">전체</button><button type="button" data-v="영업1파트">영업1파트</button><button type="button" data-v="영업2파트">영업2파트</button></div>
           <div class="tseg" id="tsegP"><button type="button" data-v="월별" class="on">월별</button><button type="button" data-v="연누적">연누적</button></div>
-          <div class="trend-legend"><span><b>영업1파트</b> = 참고서(영/수/국) + 교과서 + AIDT</span><span><b>영업2파트</b> = B&amp;G + OUP</span></div>
         </div>
         <div class="trend-chips" id="trend-chips"></div>
         <div class="trend-cw"><canvas id="trend-cv"></canvas></div>
@@ -1012,7 +980,7 @@ function renderTrendChart() {
   const cum = a => a.reduce((acc, v, i) => (acc.push((i ? acc[i - 1] : 0) + v), acc), []);
   const f1 = n => Number(n).toFixed(1);
   if (trendChart) { trendChart.destroy(); trendChart = null; }
-  const opts = t => ({ responsive: true, maintainAspectRatio: false, layout: { padding: { top: 14 } },
+  const opts = t => ({ responsive: true, maintainAspectRatio: false,
     plugins: { title: { display: true, text: `${t} · ${trendState.g}`, color: "#243B53", font: { size: 13, weight: "600" } },
       legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } },
       tooltip: { callbacks: { label: c => `${c.dataset.label} ${f1(c.parsed.y)}억` } } },
@@ -1021,12 +989,12 @@ function renderTrendChart() {
     trendChart = new Chart(ctx, { type: "line", data: { labels: TREND_DATA.months, datasets: [
       { label: "2026 누적", data: cum(d.y26), borderColor: "#1F5E92", backgroundColor: "#1F5E92", borderWidth: 2.5, tension: .25, pointRadius: 3 },
       { label: "2025 누적", data: cum(d.y25), borderColor: "#D9A325", backgroundColor: "#D9A325", borderWidth: 2, borderDash: [6, 4], tension: .25, pointRadius: 3 }] },
-      options: opts("연누적 매출 추이 (26 vs 25)"), plugins: [trendValueLabels] });
+      options: opts("연누적 매출 추이 (26 vs 25)") });
   } else {
     trendChart = new Chart(ctx, { type: "bar", data: { labels: TREND_DATA.months, datasets: [
       { label: "2026", data: d.y26, backgroundColor: "#1F5E92", borderRadius: 3 },
       { label: "2025", data: d.y25, backgroundColor: "#D9A325", borderRadius: 3 }] },
-      options: opts("월별 매출 (26 vs 25)"), plugins: [trendValueLabels] });
+      options: opts("월별 매출 (26 vs 25)") });
   }
 }
 
@@ -1066,9 +1034,9 @@ function openGonggyoDetail() {
   m.querySelector(".gg-body").innerHTML = `
     <div class="gg-note">${escape(g.note)}</div>
     <div class="gg-sum">
-      <div class="gg-card"><div class="l">27학년도 고3 목표</div><div class="v">${pct(g.target)}</div><div class="s">전체 선택과목 점유율 (= 26 고2 실적 기준)</div></div>
+      <div class="gg-card"><div class="l">27학년도 목표</div><div class="v">${pct(g.target)}</div><div class="s">전체 선택과목 점유율</div></div>
       <div class="gg-card"><div class="l">26학년도 고2 실적(합계)</div><div class="v">${pct(baseShare)}</div><div class="s">NE ${num(baseNe)} / 출원 ${num(baseAll)}</div></div>
-      <div class="gg-card"><div class="l">목표 달성률</div><div class="v" style="color:var(--status-good)">${(baseShare / g.target * 100).toFixed(1)}%</div><div class="s">목표 = 실적, 동일 기준 수립</div></div>
+      <div class="gg-card"><div class="l">목표 − 실적</div><div class="v" style="color:var(--brand-deep)">+${((g.target - baseShare) * 100).toFixed(1)}%p</div><div class="s">실적 기반 소폭 상향</div></div>
     </div>
     <div class="gg-chart"><canvas id="gg-cv"></canvas></div>
     <table class="gg-table">
