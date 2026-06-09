@@ -1,11 +1,5 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.7
- *
- * v3.7 변경
- *  - (고3 영어) 점유율 카드: 세부보기 버튼을 시트 detailSheet 값과 무관하게 하드코딩 노출(isGonggyoKpi: 카드명 패턴 판정) → 공교육 전용 레이어 연결
- *  - 확정시점 배너 텍스트 2026.12 → 2026.11 결과 확정
- *  - 추세 펼침 패널 명칭 '추세 분석' → '추세'
- *  - 추세 월별 막대 25년 색상 #B9CFE0 → #D9A325 (26년 #1F5E92와 명확히 구분)
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.4
  *
  * v3.6 변경
  *  - 월별 매출현황 표 라벨 / 컬럼 헤더를 시트에서 동적으로 가져옴 (5월/6월/컬럼명 변경 자동 반영)
@@ -227,13 +221,6 @@ const STATUS_MAP = {
 
 function fmtNum(n){ return (n==null) ? "-" : Number(n).toLocaleString("ko-KR"); }
 
-// (고3 영어) 점유율 카드 판정 — 구글시트 detailSheet 값과 무관하게 공교육 레이어를 띄운다.
-// 시트 H열(detailSheet)이 '공교육'이거나, 카드명이 고3영어 패턴이면 GONGGYO 전용 레이어로 연결(하드코딩 노출).
-function isGonggyoKpi(k){
-  if (typeof GONGGYO === "undefined") return false;
-  return k.detailSheet === "공교육" || /고\s*3[\s\S]*영어/.test(k.name || "");
-}
-
 function stepperHtml(stages, cur) {
   return `<div class="stepper">` + stages.map((s, idx) => {
     const cls = idx < cur ? "done" : (idx === cur ? "cur" : "todo");
@@ -247,7 +234,7 @@ function renderKpis(kpis) {
   if (!el) return;
   el.innerHTML = kpis.map((k, i) => {
     const stageChip = k.stage ? `<span class="kpi-stage">${escape(k.stage)}</span>` : "";
-    const isGonggyo = isGonggyoKpi(k);
+    const isGonggyo = (k.detailSheet === "공교육" && typeof GONGGYO !== "undefined");
     const hasDetail = isGonggyo || !!(k.detail && k.detail.length);
     const detailBtn = hasDetail ? `<button class="detail-btn" type="button" data-i="${i}">🔍 세부보기</button>` : "";
     let body;
@@ -255,7 +242,7 @@ function renderKpis(kpis) {
       // 레이아웃 X — 결과 일괄 확정형. 확정시점/단계: 시트 값 우선, 없으면 임시 하드코딩(추후 시트 연동)
       let dueLabel = k.dueLabel, stages = k.stages, stageCur = k.stageCurrent;
       if (!dueLabel && (!stages || !stages.length)) {
-        dueLabel = "2026.11 결과 확정 · 27학년도 학교별 교과서 채택 · 확정 전";
+        dueLabel = "2026.12 결과 확정 · 27학년도 학교별 교과서 채택 · 확정 전";
         stages = ["전략 수립", "현장 영업", "채택 확정"];
         stageCur = 1;
       }
@@ -291,7 +278,7 @@ function renderKpis(kpis) {
 
 // KPI 세부보기 — 세부 시트 내용을 표로 레이어창에 표시(타이틀 고정 + 본문 세로 스크롤)
 function openKpiDetail(k) {
-  if (isGonggyoKpi(k) && typeof Chart !== "undefined") { openGonggyoDetail(); return; }
+  if (k.detailSheet === "공교육" && typeof GONGGYO !== "undefined" && typeof Chart !== "undefined") { openGonggyoDetail(); return; }
   let m = document.getElementById("kpi-detail-modal");
   if (!m) {
     m = document.createElement("div");
@@ -913,7 +900,7 @@ function buildTrendExpander() {
   return `
     <div class="trend-exp" id="trend-exp">
       <div class="trend-head" id="trend-head" role="button" tabindex="0" aria-expanded="false">
-        <b>📈 추세 — 2026 vs 2025 (연누적·월 YoY)</b>
+        <b>📈 추세 분석 — 2026 vs 2025 (연누적·월 YoY)</b>
         <span class="arrow">▼</span>
       </div>
       <div class="trend-body">
@@ -993,7 +980,7 @@ function renderTrendChart() {
   } else {
     trendChart = new Chart(ctx, { type: "bar", data: { labels: TREND_DATA.months, datasets: [
       { label: "2026", data: d.y26, backgroundColor: "#1F5E92", borderRadius: 3 },
-      { label: "2025", data: d.y25, backgroundColor: "#D9A325", borderRadius: 3 }] },
+      { label: "2025", data: d.y25, backgroundColor: "#B9CFE0", borderRadius: 3 }] },
       options: opts("월별 매출 (26 vs 25)") });
   }
 }
