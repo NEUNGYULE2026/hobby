@@ -1,8 +1,5 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.11
- *
- * v3.11 변경
- *  - 공교육 팝업 문구: 흐름 라벨 '그대로 목표로 수립'->'유지 목표', 근거 문장 간결화(동일 선택과목 기반 26 고2 실적->27 고3 목표 수립)
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.10
  *
  * v3.10 변경
  *  - 공교육 팝업 '근거형'으로 재구성: 26 고2 실적→27 고3 목표 흐름(동일 41.7%) + 한 줄 근거 문장 + 근거 데이터 표만 유지. 요약카드 3개·과목별 막대차트·출처 문구 제거(gonggyoChart 삭제)
@@ -1072,10 +1069,10 @@ function openGonggyoDetail() {
     <div class="gg-basis">
       <div class="gg-flow">
         <div class="gg-node"><span class="lbl">26학년도 고2<br>동일 선택과목 실적 점유율</span><span class="val">${pct(baseShare)}</span></div>
-        <div class="gg-op"><span class="arr">&rarr;</span><span>유지<br>목표</span></div>
+        <div class="gg-op"><span class="arr">&rarr;</span><span>그대로<br>목표로 수립</span></div>
         <div class="gg-node target"><span class="lbl">27학년도 고3<br>점유율 목표</span><span class="val">${pct(g.target)}</span></div>
       </div>
-      <p class="gg-msg"><b>동일 선택과목</b> 기반 직전 학년(26학년도 고2)의 실제 점유율(${pct(baseShare)})을 <b>27학년도 3학년 선택과목 점유율 목표</b>로 수립.</p>
+      <p class="gg-msg">27학년도 고3 목표 <b>${pct(g.target)}</b>는 임의로 정한 수치가 아닙니다. <b>같은 선택과목을 수강한 직전 학년(26학년도 고2)의 실제 점유율 ${pct(baseShare)}</b>를 그대로 목표로 삼았습니다 &mdash; 즉, <b>직전 실측 실적에 근거한 목표</b>입니다.</p>
     </div>
     <div class="gg-sec-h">산정 근거 &mdash; 26학년도 고2 선택과목 실적</div>
     <table class="gg-table">
