@@ -1,5 +1,9 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.12
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.13
+ *
+ * v3.13 변경
+ *  - 추세 캡션 하드코딩 일자('1~8일') 제거 → cutNote가 기간을 단독 소유(일자 변경 시 trend-data.js만 수정). 25년은 '동기간(같은 일자) 컷'으로 일반화.
+ *  - (데이터) trend-data.js 재집계: 26년 rawdata 갱신 반영, 6월 컷 6/8→6/10(25년 1~10일 동기간). 1~5월 값 불변.
  *
  * v3.12 변경
  *  - 추세 26년 최종월(현재 진행월) 값을 rawdata 집계 대신 구글시트 매출현황의 파트별 총출고로 동적 교체
@@ -1000,7 +1004,7 @@ function buildTrendExpander() {
         </div>
         <div class="trend-chips" id="trend-chips"></div>
         <div class="trend-cw"><canvas id="trend-cv"></canvas></div>
-        <div class="trend-cap">${escape(TREND_DATA.cutNote)} · 기준: ${escape(TREND_DATA.basis)} · 26년 최종월은 구글시트 파트별 총출고, 25년 동월은 1~8일 진행분</div>
+        <div class="trend-cap">${escape(TREND_DATA.cutNote)} · 기준: ${escape(TREND_DATA.basis)} · 26년 최종월은 구글시트 파트별 총출고, 25년 동월은 동기간(같은 일자) 컷</div>
       </div>
     </div>`;
 }
