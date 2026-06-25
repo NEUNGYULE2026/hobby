@@ -1,5 +1,9 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.15
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.16
+ *
+ * v3.16 변경
+ *  - 증감사유 팝업: (지사)/(총판) 접두어 볼드 처리(모달 본문 textContent→innerHTML, escape 후 접두어만 <strong>).
+ *  - 영업1·영업2 비고 둘 다 있으면 영업1 내용과 (총판) 사이에 빈 줄 1개 확보(_fLines.join '\n'→'\n\n').
  *
  * v3.15 변경
  *  - 증감사유 팝업(모달) 제목 문구 '증감사유' → '(증감)주요내역'(modal-title·aria-label). 표 컬럼 헤더·아이콘 tooltip은 '증감사유' 유지.
@@ -388,7 +392,7 @@ function renderMonthlySales(ms) {
   const _fLines = [];
   if (nz(_ft0.part1Remark)) _fLines.push('(지사)\n' + nz(_ft0.part1Remark));
   if (nz(_ft0.part2Remark)) _fLines.push('(총판)\n' + nz(_ft0.part2Remark));
-  const forecastReason = _fLines.join('\n');
+  const forecastReason = _fLines.join('\n\n'); // 영업1·2 둘 다 있으면 사이에 빈 줄 1개 확보
   const showReason = rows.some(r => nz(r.remark)) || !!forecastReason;
   const REASON_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>`;
   function reasonCell(text) {
@@ -486,7 +490,9 @@ function openReasonModal(text) {
     modal.querySelector('.reason-modal-close').addEventListener('click', close);
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   }
-  modal.querySelector('.reason-modal-body').textContent = text || "";
+  // 본문은 HTML 이스케이프 후 (지사)/(총판) 접두어만 볼드 처리(개행은 .reason-modal-body의 white-space:pre-wrap가 렌더)
+  modal.querySelector('.reason-modal-body').innerHTML =
+    escape(text || "").replace(/\((지사|총판)\)/g, '<strong>($1)</strong>');
   modal.classList.add('open');
 }
 
