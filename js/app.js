@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.14
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.15
+ *
+ * v3.15 변경
+ *  - 증감사유 팝업(모달) 제목 문구 '증감사유' → '(증감)주요내역'(modal-title·aria-label). 표 컬럼 헤더·아이콘 tooltip은 '증감사유' 유지.
  *
  * v3.14 변경
  *  - 증감사유(월마감 예상매출 합계) 비고에서 (지사)/(총판) 접두어 뒤를 공백→줄바꿈으로 변경. 접두어가 한 줄, 비고 내용은 다음 행부터 표시.
@@ -469,9 +472,9 @@ function openReasonModal(text) {
     modal.className = 'reason-modal';
     modal.innerHTML = `
       <div class="reason-modal-backdrop"></div>
-      <div class="reason-modal-box" role="dialog" aria-modal="true" aria-label="증감사유">
+      <div class="reason-modal-box" role="dialog" aria-modal="true" aria-label="(증감)주요내역">
         <div class="reason-modal-head">
-          <span class="reason-modal-title">증감사유</span>
+          <span class="reason-modal-title">(증감)주요내역</span>
           <button class="reason-modal-close" type="button" aria-label="닫기">&times;</button>
         </div>
         <div class="reason-modal-body"></div>
