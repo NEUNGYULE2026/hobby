@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.13
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.14
+ *
+ * v3.14 변경
+ *  - 증감사유(월마감 예상매출 합계) 비고에서 (지사)/(총판) 접두어 뒤를 공백→줄바꿈으로 변경. 접두어가 한 줄, 비고 내용은 다음 행부터 표시.
  *
  * v3.13 변경
  *  - 추세 캡션 하드코딩 일자('1~8일') 제거 → cutNote가 기간을 단독 소유(일자 변경 시 trend-data.js만 수정). 25년은 '동기간(같은 일자) 컷'으로 일반화.
@@ -380,8 +383,8 @@ function renderMonthlySales(ms) {
   // 일반/합계 행: 자기 비고. 월마감 예상매출 합계 행: 마감 예상매출 표의 영업1(지사)·영업2(총판) 비고 합산.
   const _ft0 = ms.forecastTotal || {};
   const _fLines = [];
-  if (nz(_ft0.part1Remark)) _fLines.push('(지사) ' + nz(_ft0.part1Remark));
-  if (nz(_ft0.part2Remark)) _fLines.push('(총판) ' + nz(_ft0.part2Remark));
+  if (nz(_ft0.part1Remark)) _fLines.push('(지사)\n' + nz(_ft0.part1Remark));
+  if (nz(_ft0.part2Remark)) _fLines.push('(총판)\n' + nz(_ft0.part2Remark));
   const forecastReason = _fLines.join('\n');
   const showReason = rows.some(r => nz(r.remark)) || !!forecastReason;
   const REASON_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>`;
