@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.22
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.23
+ *
+ * v3.23 변경
+ *  - (고3영어/레이아웃 X) 카드 간소화: '최종 목표' 값 헤드라인(41.7%) 제거 → 📌 확정시점 배너로 대체(동일 폰트), 단계 스텝(전략수립/현장영업/채택확정) 삭제. 근거 버튼은 배너 우측 유지. style.css v3.14(.kpi-goalrow).
  *
  * v3.22 변경
  *  - (고3영어) 카드: '최종 목표' 줄 우측에 '근거' 버튼 신설(기존 세부보기=공교육 근거 팝업 연결). 하단 버튼을 '세부보기'→'🔗 선택교과 영업현황'(https://necrm-2026.vercel.app/ _blank)으로 교체.
@@ -302,21 +305,13 @@ function renderKpis(kpis) {
     const basisBtn = isGonggyo ? `<button class="gg-basis-btn" type="button" data-detail="${i}">근거</button>` : "";
     let body;
     if (k.layout === "static") {
-      // 레이아웃 X — 결과 일괄 확정형. 확정시점/단계: 시트 값 우선, 없으면 임시 하드코딩(추후 시트 연동)
-      let dueLabel = k.dueLabel, stages = k.stages, stageCur = k.stageCurrent;
-      if (!dueLabel && (!stages || !stages.length)) {
-        dueLabel = "2026.11 결과 확정";
-        stages = ["전략 수립", "현장 영업", "채택 확정"];
-        stageCur = 1;
-      }
-      const due = dueLabel ? `<div class="kpi-due">📌 ${escape(dueLabel)}</div>` : "";
-      const steps = (stages && stages.length) ? stepperHtml(stages, stageCur) : "";
+      // 레이아웃 X — 최종목표 값·단계 스텝 제거. 📌 확정시점 배너(시트 값 우선, 없으면 하드코딩) + (고3영어)근거 버튼만 표기
+      const dueLabel = k.dueLabel || "2026.11 결과 확정";
       body = `
-        <div class="kpi-value">
-          <span class="now">${fmtNum(k.target)}<span class="unit">${escape(k.unit || "")}</span></span>
-          <span class="goal-tag">최종 목표</span>
+        <div class="kpi-goalrow">
+          <span class="kpi-due">📌 ${escape(dueLabel)}</span>
           ${basisBtn}
-        </div>${due}${steps}`;
+        </div>`;
     } else {
       const rate = (k.rate == null) ? 0 : k.rate;
       const barW = Math.max(0, Math.min(100, rate));

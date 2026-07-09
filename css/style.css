@@ -4,6 +4,7 @@
  * v3.11 — 공교육 팝업 근거형(실적->목표) 재구성
  * v3.12 — 본부 핵심 과제 KPI 그리드 3열 → 4열(데스크톱). 반응형(960px 2열·600px 1열) 유지
  * v3.13 — (고3영어) 카드 '근거' 버튼(.gg-basis-btn) 추가
+ * v3.14 — (고3영어) 최종목표 헤드라인·스텝 제거, 📌 배너+근거 한 줄(.kpi-goalrow)
  * - 컬러 테마: 보라/라벤더
  * - 추가: 파트 그루핑, [★] 핵심 카드, 빈 섹션 자동 숨김
  * ============================================================ */
@@ -1095,6 +1096,8 @@ a { color: inherit; text-decoration: none; }
  * v4.5 — 결과 일괄 확정형(레이아웃 X): 확정시점 배너 + 단계 스텝
  * ============================================================ */
 .kpi-due{font-size:11.5px;color:var(--brand-deep);background:var(--brand-pale);border-radius:6px;padding:6px 9px;margin:9px 0 11px;line-height:1.45;}
+.kpi-goalrow{display:flex;align-items:center;gap:8px;margin:2px 0 6px;}
+.kpi-goalrow .kpi-due{margin:0;}
 .stepper{display:flex;align-items:flex-start;margin:0 0 12px;}
 .stepper .step{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;color:var(--text-faded);text-align:center;flex:0 0 auto;width:60px;}
 .stepper .step i{width:14px;height:14px;border-radius:50%;background:#D9E4EC;display:block;}
