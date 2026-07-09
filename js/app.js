@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.29
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.30
+ *
+ * v3.30 변경
+ *  - 추세 구분 토글에 '저작권'·'리플릿' 추가(전체/영업1파트/영업2파트/저작권/리플릿). trend-data.js에 두 그룹 시계열 신설(v6). 칩·차트·effY26은 series 키 기반이라 버튼만 추가하면 자동 반영. 우측 범례는 미변경(그룹명 직관).
  *
  * v3.29 변경
  *  - 하드코딩 팀(마케팅전략팀·제작팀) 주차 게이팅: 드롭다운 주차가 M7-W2(7월 2주차) 이후일 때만 카드·탭 노출(weekSortKey ≥ HARDCODED_MIN_WEEK 702). 이전 주차엔 숨김.
@@ -1149,7 +1152,7 @@ function buildTrendExpander() {
       </div>
       <div class="trend-body">
         <div class="trend-ctrl">
-          <div class="tseg" id="tsegG"><button type="button" data-v="전체" class="on">전체</button><button type="button" data-v="영업1파트">영업1파트</button><button type="button" data-v="영업2파트">영업2파트</button></div>
+          <div class="tseg" id="tsegG"><button type="button" data-v="전체" class="on">전체</button><button type="button" data-v="영업1파트">영업1파트</button><button type="button" data-v="영업2파트">영업2파트</button><button type="button" data-v="저작권">저작권</button><button type="button" data-v="리플릿">리플릿</button></div>
           <div class="tseg" id="tsegP"><button type="button" data-v="월별" class="on">월별</button><button type="button" data-v="연누적">연누적</button></div>
           <div class="trend-legend"><span><b>영업1파트</b> = 참고서(영/수/국) + 교과서 + AIDT</span><span><b>영업2파트</b> = B&amp;G + OUP</span></div>
         </div>
