@@ -1,5 +1,9 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.28
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.29
+ *
+ * v3.29 변경
+ *  - 하드코딩 팀(마케팅전략팀·제작팀) 주차 게이팅: 드롭다운 주차가 M7-W2(7월 2주차) 이후일 때만 카드·탭 노출(weekSortKey ≥ HARDCODED_MIN_WEEK 702). 이전 주차엔 숨김.
+ *  - 텍스트형 KPI 달성율 미니바를 실적 바로 아래로 올림(여백 축소, style.css v3.18).
  *
  * v3.28 변경
  *  - 텍스트형 KPI에 달성율 컴팩트 인라인 미니바(C형) 추가 — 단위 칸(k.unit) 값을 achieveRate로 파싱(0~1이면 ×100), 목표/실적 아래 '달성율 [미니바] %' 한 줄. 값 없으면 미표기. style.css v3.17(.kpi-trate).
@@ -168,6 +172,13 @@ const TEAM_META = {
   regional: { id: "regional", cls: "t-regional", summary: "지역 영업 + 학원 DB 확보 + 공교육 진입" },
 };
 
+// 하드코딩 팀(마케팅전략팀·제작팀) 노출 시작 주차 — M7-W2(7월 2주차)부터. 주차키 = 월*100+주.
+const HARDCODED_MIN_WEEK = 702;
+function weekSortKey(weekKey){
+  const m = String(weekKey || "").match(/^M(\d{1,2})-W(\d{1,2})$/i);
+  return m ? (parseInt(m[1], 10) * 100 + parseInt(m[2], 10)) : 0;
+}
+
 function render(d) {
   fillWeekDropdown(d.weeks || [], d.week);
   const root = document.getElementById("app");
@@ -178,6 +189,8 @@ function render(d) {
   const ceo         = d.ceo || [];
   const teams       = d.teams || {};
   const decisions   = d.decisions || [];
+  // 하드코딩 팀(마케팅전략팀·제작팀)은 7월 2주차(M7-W2) 이후 주차에서만 노출
+  const showHardcoded = weekSortKey(d.week) >= HARDCODED_MIN_WEEK;
 
   const hasMessages = messages.length > 0;
   const hasKpis     = kpis.length > 0;
@@ -242,7 +255,7 @@ function render(d) {
   if (hasKpis)      renderKpis(kpis);
   if (hasSales)     renderMonthlySales(sales);
   if (hasCeo)       renderCeo(ceo);
-  if (hasTeams)     renderTeams(teamSections);
+  if (hasTeams)     renderTeams(teamSections, showHardcoded);
   if (hasDecisions) renderDecisions(decisions);
 
   const dlBtn = document.getElementById("download-form-btn");
@@ -259,8 +272,8 @@ function render(d) {
     overview: hasMessages,
     ceo: hasCeo,
     "sales-part1": !!teamPresent["sales-part1"],   // 탭: 수도권세일즈팀
-    "mktstrategy": hasTeams && (typeof MKT_TEAM !== "undefined" && !!MKT_TEAM), // 탭: 마케팅전략팀(하드코딩)
-    "production": hasTeams && (typeof PRODUCTION_TEAM !== "undefined" && !!PRODUCTION_TEAM), // 탭: 제작팀(하드코딩)
+    "mktstrategy": showHardcoded && (typeof MKT_TEAM !== "undefined" && !!MKT_TEAM), // 탭: 마케팅전략팀(하드코딩, M7-W2~)
+    "production": showHardcoded && (typeof PRODUCTION_TEAM !== "undefined" && !!PRODUCTION_TEAM), // 탭: 제작팀(하드코딩, M7-W2~)
     regional: !!teamPresent.regional,
     "decisions-anchor": hasDecisions,
   });
@@ -608,7 +621,7 @@ function renderCeo(items) {
   `;
 }
 
-function renderTeams(sections) {
+function renderTeams(sections, showHardcoded) {
   const el = document.getElementById("teams");
   if (!el) return;
   // 팀별로 그룹핑(순서 유지). 파트가 있는 팀은 한 카드 안에서 파트를 소제목으로 구분.
@@ -649,9 +662,11 @@ function renderTeams(sections) {
       </section>`;
   }).join("");
 
-  // 하드코딩 팀 — 구글시트가 아니라 js/*-team-data.js에서 읽어 맨 아래 순서대로 append
-  if (typeof MKT_TEAM !== "undefined" && MKT_TEAM) html += renderHardcodedTeam(MKT_TEAM);
-  if (typeof PRODUCTION_TEAM !== "undefined" && PRODUCTION_TEAM) html += renderHardcodedTeam(PRODUCTION_TEAM);
+  // 하드코딩 팀 — 7월 2주차(M7-W2) 이후 주차에서만 노출. js/*-team-data.js에서 읽어 맨 아래 순서대로 append
+  if (showHardcoded) {
+    if (typeof MKT_TEAM !== "undefined" && MKT_TEAM) html += renderHardcodedTeam(MKT_TEAM);
+    if (typeof PRODUCTION_TEAM !== "undefined" && PRODUCTION_TEAM) html += renderHardcodedTeam(PRODUCTION_TEAM);
+  }
   el.innerHTML = html;
 
   el.querySelectorAll(".basis-i").forEach(b => {

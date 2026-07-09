@@ -8,6 +8,7 @@
  * v3.15 — 텍스트형 KPI(목표/실적 텍스트) 라벨-값 레이아웃(.kpi-textbox)
  * v3.16 — KPI 카드 flex 세로 구조(같은 줄 높이 통일 + 하단 배지/버튼 정렬)
  * v3.17 — 텍스트형 KPI 달성율 컴팩트 인라인 미니바(.kpi-trate)
+ * v3.18 — 달성율 미니바 여백 축소(실적 바로 아래로 올림)
  * - 컬러 테마: 보라/라벤더
  * - 추가: 파트 그루핑, [★] 핵심 카드, 빈 섹션 자동 숨김
  * ============================================================ */
@@ -1104,7 +1105,7 @@ a { color: inherit; text-decoration: none; }
 .kpi-goalrow{display:flex;align-items:center;gap:8px;margin:2px 0 6px;}
 .kpi-goalrow .kpi-due{margin:0;}
 /* 목표/실적이 텍스트인 KPI — 깔끔한 라벨-값 레이아웃 */
-.kpi-textbox{margin:2px 0 8px;}
+.kpi-textbox{margin:2px 0 4px;}
 .kpi-trow{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border);}
 .kpi-trow:last-child{border-bottom:none;}
 .kpi-tlab{flex:0 0 38px;font-size:11px;font-weight:700;text-align:center;padding:3px 0;border-radius:5px;
@@ -1112,7 +1113,7 @@ a { color: inherit; text-decoration: none; }
 .kpi-tlab-cur{color:#fff;background:var(--brand);}
 .kpi-tval{flex:1;min-width:0;font-size:12.5px;line-height:1.55;color:var(--text-main);word-break:break-word;}
 /* 텍스트형 KPI 달성율 컴팩트 인라인 미니바(C형) */
-.kpi-trate{display:flex;align-items:center;gap:8px;margin:9px 0 4px;}
+.kpi-trate{display:flex;align-items:center;gap:8px;margin:2px 0 2px;}
 .kpi-trate .kpi-tlab-r{flex:0 0 38px;font-size:11px;font-weight:700;text-align:center;color:var(--text-soft);}
 .kpi-trate-bar{flex:1;height:7px;background:#E8EFF5;border-radius:999px;overflow:hidden;}
 .kpi-trate-bar > i{display:block;height:100%;background:var(--brand);border-radius:999px;}
