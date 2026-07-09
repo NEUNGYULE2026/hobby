@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.16
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.17
+ *
+ * v3.17 변경
+ *  - (고3영어) 확정시점 배너 하드코딩 문구에서 '· 27학년도 학교별 교과서 채택 · 확정 전' 삭제 → '2026.11 결과 확정'만 표기.
  *
  * v3.16 변경
  *  - 증감사유 팝업: (지사)/(총판) 접두어 볼드 처리(모달 본문 textContent→innerHTML, escape 후 접두어만 <strong>).
@@ -287,7 +290,7 @@ function renderKpis(kpis) {
       // 레이아웃 X — 결과 일괄 확정형. 확정시점/단계: 시트 값 우선, 없으면 임시 하드코딩(추후 시트 연동)
       let dueLabel = k.dueLabel, stages = k.stages, stageCur = k.stageCurrent;
       if (!dueLabel && (!stages || !stages.length)) {
-        dueLabel = "2026.11 결과 확정 · 27학년도 학교별 교과서 채택 · 확정 전";
+        dueLabel = "2026.11 결과 확정";
         stages = ["전략 수립", "현장 영업", "채택 확정"];
         stageCur = 1;
       }
