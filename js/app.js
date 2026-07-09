@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.30
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.31
+ *
+ * v3.31 변경
+ *  - 저작권·리플릿 최신월(7월*)도 실적 연동: buildTrendOverride가 매출현황 행에서 /저작권/(마케팅전략팀 저작권)·/리플릿/(제작팀 리플릿(제작)) 총출고를 추출해 effY26 오버라이드. 시트 총출고 없으면 폴백 0 유지.
  *
  * v3.30 변경
  *  - 추세 구분 토글에 '저작권'·'리플릿' 추가(전체/영업1파트/영업2파트/저작권/리플릿). trend-data.js에 두 그룹 시계열 신설(v6). 칩·차트·effY26은 series 키 기반이라 버튼만 추가하면 자동 반영. 우측 범례는 미변경(그룹명 직관).
@@ -1083,11 +1086,11 @@ let trendChart = null;
 const trendState = { g: "전체", p: "월별" };
 
 // 추세 26년 최종월(현재 진행월) 총출고 동적 오버라이드.
-// 구글시트 매출현황의 파트별 총출고를 그룹별로 매핑: { 전체, 영업1파트, 영업2파트 }(억 단위).
-// renderMonthlySales에서 설정. 없으면 trend-data.js 원본 그대로 사용.
+// 구글시트 매출현황의 행별 총출고를 그룹별로 매핑: { 전체, 영업1파트, 영업2파트, 저작권, 리플릿 }(억 단위).
+// 저작권 = (마케팅전략팀) 저작권 행, 리플릿 = (제작팀) 리플릿(제작) 행. renderMonthlySales에서 설정. 없으면 trend-data.js 원본 그대로 사용.
 let trendLastOverride = null;
 
-// 매출현황 rows(ms.rows)에서 파트별 총출고(shipped) 추출 → 오버라이드 맵 생성.
+// 매출현황 rows(ms.rows)에서 그룹별 총출고(shipped) 추출 → 오버라이드 맵 생성.
 function buildTrendOverride(rows) {
   if (!Array.isArray(rows) || !rows.length) return null;
   const ov = {};
@@ -1098,6 +1101,8 @@ function buildTrendOverride(rows) {
     if (!isFinite(s)) return;
     if (/영업\s*1\s*파트/.test(lbl))      { ov["영업1파트"] = s; partSum += s; hasPart = true; }
     else if (/영업\s*2\s*파트/.test(lbl)) { ov["영업2파트"] = s; partSum += s; hasPart = true; }
+    else if (/저작권/.test(lbl))          { if (ov["저작권"] == null) ov["저작권"] = s; }
+    else if (/리플릿/.test(lbl))          { if (ov["리플릿"] == null) ov["리플릿"] = s; }
     if (r && r.type === "total")          { ov["전체"] = s; }
   });
   // 합계행이 없으면 파트 합으로 전체 보정
