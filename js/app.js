@@ -1,5 +1,12 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.20
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.22
+ *
+ * v3.22 변경
+ *  - (고3영어) 카드: '최종 목표' 줄 우측에 '근거' 버튼 신설(기존 세부보기=공교육 근거 팝업 연결). 하단 버튼을 '세부보기'→'🔗 선택교과 영업현황'(https://necrm-2026.vercel.app/ _blank)으로 교체.
+ *  - style.css v3.13: .gg-basis-btn 추가.
+ *
+ * v3.21 변경
+ *  - 부서별 주간 보고 '기존 폼으로 다운로드' 버튼 숨김(마크업 제거). downloadWeeklyForm 함수·핸들러 가드는 유지(dlBtn null 안전).
  *
  * v3.20 변경
  *  - 상단 탭 변경: 영업1파트·영업2파트 → 수도권세일즈팀(#sales-part1)·마케팅전략팀(#mktstrategy). setupNavScroll config·index.html 탭 동기화.
@@ -201,14 +208,6 @@ function render(d) {
     parts.push(`
       <div class="section-head-row" id="teams-head">
         <h2 class="section-title" id="teams-anchor">부서별 주간 보고</h2>
-        <button class="download-btn" id="download-form-btn" type="button" title="현재 보고 있는 주차 데이터를 기존 폼(금주/차주) 엑셀로 다운로드">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          기존 폼으로 다운로드
-        </button>
       </div>
     `);
     parts.push(`<div id="teams"></div>`);
@@ -295,7 +294,12 @@ function renderKpis(kpis) {
     const stageChip = k.stage ? `<span class="kpi-stage">${escape(k.stage)}</span>` : "";
     const isGonggyo = isGonggyoKpi(k);
     const hasDetail = isGonggyo || !!(k.detail && k.detail.length);
-    const detailBtn = hasDetail ? `<button class="detail-btn" type="button" data-i="${i}">🔍 세부보기</button>` : "";
+    // 고3영어 카드: 하단 버튼 = '선택교과 영업현황'(외부 링크 _blank). 그 외: 기존 '세부보기'.
+    const footBtn = isGonggyo
+      ? `<a class="detail-btn" href="https://necrm-2026.vercel.app/" target="_blank" rel="noopener">🔗 선택교과 영업현황</a>`
+      : (hasDetail ? `<button class="detail-btn" type="button" data-i="${i}">🔍 세부보기</button>` : "");
+    // 고3영어 카드: '최종 목표' 줄 우측 끝 '근거' 버튼 → 기존 세부보기(공교육 근거 팝업) 호출.
+    const basisBtn = isGonggyo ? `<button class="gg-basis-btn" type="button" data-detail="${i}">근거</button>` : "";
     let body;
     if (k.layout === "static") {
       // 레이아웃 X — 결과 일괄 확정형. 확정시점/단계: 시트 값 우선, 없으면 임시 하드코딩(추후 시트 연동)
@@ -311,6 +315,7 @@ function renderKpis(kpis) {
         <div class="kpi-value">
           <span class="now">${fmtNum(k.target)}<span class="unit">${escape(k.unit || "")}</span></span>
           <span class="goal-tag">최종 목표</span>
+          ${basisBtn}
         </div>${due}${steps}`;
     } else {
       const rate = (k.rate == null) ? 0 : k.rate;
@@ -327,11 +332,14 @@ function renderKpis(kpis) {
       <div class="kpi-card">
         <p class="kpi-name">${escape(k.name)}</p>
         ${body}
-        <div class="kpi-foot">${stageChip}${detailBtn}</div>
+        <div class="kpi-foot">${stageChip}${footBtn}</div>
       </div>`;
   }).join("");
-  el.querySelectorAll(".detail-btn").forEach(b => {
+  el.querySelectorAll("button.detail-btn").forEach(b => {
     b.addEventListener("click", () => openKpiDetail(kpis[+b.dataset.i]));
+  });
+  el.querySelectorAll(".gg-basis-btn").forEach(b => {
+    b.addEventListener("click", () => openKpiDetail(kpis[+b.dataset.detail]));
   });
 }
 
