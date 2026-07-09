@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.25
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.26
+ *
+ * v3.26 변경
+ *  - 제작팀(하드코딩) 추가 — js/production-team-data.js(PRODUCTION_TEAM, 파트 없음). renderHardcodedTeam을 파트有/無 모두 지원하도록 일반화. 상단 탭 '제작팀'(#production) 연결(setupNavScroll·index.html). 원본 form/xlsx.
  *
  * v3.25 변경
  *  - 본부 핵심 과제: 목표/실적이 텍스트(수치 아님)인 KPI는 달성률 막대 대신 깔끔한 라벨-값(목표/실적) 레이아웃으로 렌더(isTextKpi, .kpi-textbox). 원문은 Code.gs v3.8의 targetRaw/currentRaw. style.css v3.15.
@@ -251,6 +254,7 @@ function render(d) {
     ceo: hasCeo,
     "sales-part1": !!teamPresent["sales-part1"],   // 탭: 수도권세일즈팀
     "mktstrategy": hasTeams && (typeof MKT_TEAM !== "undefined" && !!MKT_TEAM), // 탭: 마케팅전략팀(하드코딩)
+    "production": hasTeams && (typeof PRODUCTION_TEAM !== "undefined" && !!PRODUCTION_TEAM), // 탭: 제작팀(하드코딩)
     regional: !!teamPresent.regional,
     "decisions-anchor": hasDecisions,
   });
@@ -625,10 +629,9 @@ function renderTeams(sections) {
       </section>`;
   }).join("");
 
-  // 하드코딩 팀(마케팅전략팀) — 구글시트가 아니라 js/mkt-team-data.js에서 읽어 맨 아래 append
-  if (typeof MKT_TEAM !== "undefined" && MKT_TEAM && MKT_TEAM.parts) {
-    html += renderHardcodedTeam(MKT_TEAM);
-  }
+  // 하드코딩 팀 — 구글시트가 아니라 js/*-team-data.js에서 읽어 맨 아래 순서대로 append
+  if (typeof MKT_TEAM !== "undefined" && MKT_TEAM) html += renderHardcodedTeam(MKT_TEAM);
+  if (typeof PRODUCTION_TEAM !== "undefined" && PRODUCTION_TEAM) html += renderHardcodedTeam(PRODUCTION_TEAM);
   el.innerHTML = html;
 
   el.querySelectorAll(".basis-i").forEach(b => {
@@ -638,17 +641,25 @@ function renderTeams(sections) {
   });
 }
 
-// 하드코딩 팀(마케팅전략팀 등) 렌더 — 수도권세일즈팀과 동일 구성(팀 카드 + 파트 볼드 소제목), 열 라벨은 tm.headers 사용
+// 하드코딩 팀 렌더 — 파트 있으면 파트 볼드 소제목(.part-label)별 표, 없으면 단일 표. 열 라벨은 tm.headers 사용.
 function renderHardcodedTeam(tm) {
-  const body = (tm.parts || []).map((p, i) => `
+  const cls = tm.cls || "t-sales";
+  const hasParts = tm.parts && tm.parts.length;
+  let body, solo = "";
+  if (hasParts) {
+    body = tm.parts.map((p, i) => `
           <div class="part-group"${i > 0 ? ` id="${escape(p.id)}"` : ""}>
             <div class="part-label">${escape(p.part)}</div>
             <div class="dept-table-wrap">${renderDeptTable(p.items, tm.headers)}</div>
           </div>`).join("");
+  } else {
+    body = `<div class="dept-table-wrap">${renderDeptTable(tm.items || [], tm.headers)}</div>`;
+    solo = " team-block-solo";
+  }
   return `
-      <section class="team-block" id="${escape(tm.id)}">
-        <header class="team-header ${tm.cls || "t-sales"}"><h2>${escape(tm.name)}</h2></header>
-        <div class="team-body ${tm.cls || "t-sales"}">${body}</div>
+      <section class="team-block${solo}" id="${escape(tm.id)}">
+        <header class="team-header ${cls}"><h2>${escape(tm.name)}</h2></header>
+        <div class="team-body ${cls}">${body}</div>
       </section>`;
 }
 
