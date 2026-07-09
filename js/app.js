@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.27
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.28
+ *
+ * v3.28 변경
+ *  - 텍스트형 KPI에 달성율 컴팩트 인라인 미니바(C형) 추가 — 단위 칸(k.unit) 값을 achieveRate로 파싱(0~1이면 ×100), 목표/실적 아래 '달성율 [미니바] %' 한 줄. 값 없으면 미표기. style.css v3.17(.kpi-trate).
  *
  * v3.27 변경
  *  - 텍스트형 KPI 우선순위 상향: 목표/실적이 텍스트면 레이아웃 X(정적)여도 텍스트형 레이아웃으로 렌더(isTextKpi > static). 예: '제작 & 물류 자동화율'.
@@ -295,6 +298,16 @@ function isTextKpi(k){
   return tText || cText;
 }
 
+// 텍스트형 KPI의 달성율(%) — 단위 칸(k.unit) 값 파싱. 0~1이면 ×100(비율), 그 외 그대로(%). 비수치면 null.
+function achieveRate(k){
+  const raw = (k.unit == null) ? "" : String(k.unit).trim();
+  if(!raw) return null;
+  let n = parseFloat(raw.replace(/[,%\s]/g, ""));
+  if(isNaN(n)) return null;
+  if(n <= 1) n = n * 100;
+  return Math.round(n);
+}
+
 // (고3 영어) 점유율 카드 판정 — 구글시트 detailSheet 값과 무관하게 공교육 레이어를 띄운다.
 // 시트 H열(detailSheet)이 '공교육'이거나, 카드명이 고3영어 패턴이면 GONGGYO 전용 레이어로 연결(하드코딩 노출).
 function isGonggyoKpi(k){
@@ -336,14 +349,17 @@ function renderKpis(kpis) {
         </div>
         <div class="kpi-due">📌 ${escape(dueLabel)}</div>`;
     } else if (isTextKpi(k)) {
-      // 목표/실적이 텍스트 → 달성률 막대 대신 깔끔한 라벨-값(목표/실적) 레이아웃
+      // 목표/실적이 텍스트 → 라벨-값(목표/실적) + (단위칸의 달성율 있으면) 컴팩트 인라인 미니바
       const tv = nlbr(k.targetRaw) || "-";
       const cv = nlbr(k.currentRaw) || "-";
+      const ar = achieveRate(k);   // 단위 칸의 달성율(0~1이면 ×100), 없으면 null
+      const rateRow = (ar == null) ? "" : `
+        <div class="kpi-trate"><span class="kpi-tlab-r">달성율</span><span class="kpi-trate-bar ${ar>=100?"full":""}"><i style="width:${Math.max(0,Math.min(100,ar))}%"></i></span><span class="kpi-trate-pct">${ar}%</span></div>`;
       body = `
         <div class="kpi-textbox">
           <div class="kpi-trow"><span class="kpi-tlab">목표</span><span class="kpi-tval">${tv}</span></div>
           <div class="kpi-trow"><span class="kpi-tlab kpi-tlab-cur">실적</span><span class="kpi-tval">${cv}</span></div>
-        </div>`;
+        </div>${rateRow}`;
     } else {
       const rate = (k.rate == null) ? 0 : k.rate;
       const barW = Math.max(0, Math.min(100, rate));
