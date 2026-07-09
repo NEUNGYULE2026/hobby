@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.19
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.20
+ *
+ * v3.20 변경
+ *  - 상단 탭 변경: 영업1파트·영업2파트 → 수도권세일즈팀(#sales-part1)·마케팅전략팀(#mktstrategy). setupNavScroll config·index.html 탭 동기화.
  *
  * v3.19 변경
  *  - 부서별 주간 보고에 마케팅전략팀(하드코딩) 추가 — js/mkt-team-data.js(MKT_TEAM)를 맨 아래 카드로 append(DI/온라인유통/물류/CS 파트). 원본 form/xlsx.
@@ -238,8 +241,8 @@ function render(d) {
   setupNavScroll({
     overview: hasMessages,
     ceo: hasCeo,
-    "sales-part1": !!teamPresent["sales-part1"],
-    "sales-part2": !!teamPresent["sales-part2"],
+    "sales-part1": !!teamPresent["sales-part1"],   // 탭: 수도권세일즈팀
+    "mktstrategy": hasTeams && (typeof MKT_TEAM !== "undefined" && !!MKT_TEAM), // 탭: 마케팅전략팀(하드코딩)
     regional: !!teamPresent.regional,
     "decisions-anchor": hasDecisions,
   });
