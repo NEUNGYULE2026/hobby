@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.26
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.27
+ *
+ * v3.27 변경
+ *  - 텍스트형 KPI 우선순위 상향: 목표/실적이 텍스트면 레이아웃 X(정적)여도 텍스트형 레이아웃으로 렌더(isTextKpi > static). 예: '제작 & 물류 자동화율'.
  *
  * v3.26 변경
  *  - 제작팀(하드코딩) 추가 — js/production-team-data.js(PRODUCTION_TEAM, 파트 없음). renderHardcodedTeam을 파트有/無 모두 지원하도록 일반화. 상단 탭 '제작팀'(#production) 연결(setupNavScroll·index.html). 원본 form/xlsx.
@@ -86,7 +89,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbwsWXxE_cDwEE1YjKFpP7oimi65Gahj4eX60ogeGm6kckLhVIa7B91YFe6SxShQ9p9C/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwmu4A94bAVmyn_p92Dnidf0IFS1NKS0wbuakFRmwOMuxWIH-hdbYu4Hdp_6wri89c/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -321,8 +324,9 @@ function renderKpis(kpis) {
     // 고3영어 카드: '최종 목표' 줄 우측 끝 '근거' 버튼 → 기존 세부보기(공교육 근거 팝업) 호출.
     const basisBtn = isGonggyo ? `<button class="gg-basis-btn" type="button" data-detail="${i}">근거</button>` : "";
     let body;
-    if (k.layout === "static") {
+    if (!isTextKpi(k) && k.layout === "static") {
       // 레이아웃 X — 최종목표 값(41.7% 등) + 📌 확정시점 배너. 단계 스텝은 미표기(v3.23~). 근거 버튼은 최종목표 줄 우측.
+      // ※ 목표/실적이 텍스트면(isTextKpi) 레이아웃 X여도 정적이 아닌 텍스트형으로 렌더(아래 분기).
       const dueLabel = k.dueLabel || "2026.11 결과 확정";
       body = `
         <div class="kpi-value">
