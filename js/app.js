@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.17
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.18
+ *
+ * v3.18 변경
+ *  - 부서별 주간 보고: 파트별 카드 → 팀별 카드로 재편. 수도권세일즈팀 1개 카드 안에서 영업1파트·영업2파트를 볼드 소제목(.part-label)으로 구분. 팀 요약문구(team-summary) 제거(수도권). 탭 앵커(#sales-part1=카드/#sales-part2=영업2파트 소제목) 유지. 지역세일즈팀은 종전대로.
  *
  * v3.17 변경
  *  - (고3영어) 확정시점 배너 하드코딩 문구에서 '· 27학년도 학교별 교과서 채택 · 확정 전' 삭제 → '2026.11 결과 확정'만 표기.
@@ -510,6 +513,8 @@ function buildTeamSections(teams) {
     if (!items.length) return;
     sections.push({
       id: cfg.key,
+      team: cfg.team,
+      part: cfg.part,
       cls: cfg.cls,
       title: cfg.title,
       summary: cfg.summary,
@@ -547,17 +552,43 @@ function renderCeo(items) {
 function renderTeams(sections) {
   const el = document.getElementById("teams");
   if (!el) return;
-  el.innerHTML = sections.map(sec => `
-      <section class="team-block team-block-solo" id="${sec.id}">
-        <header class="team-header ${sec.cls}">
-          <h2>${escape(sec.title)}</h2>
-        </header>
-        <div class="team-summary">${escape(sec.summary)}</div>
-        <div class="team-body ${sec.cls}">
-          <div class="dept-table-wrap">${renderDeptTable(sec.items)}</div>
+  // 팀별로 그룹핑(순서 유지). 파트가 있는 팀은 한 카드 안에서 파트를 소제목으로 구분.
+  const order = [];
+  const byTeam = {};
+  sections.forEach(sec => {
+    if (!byTeam[sec.team]) { byTeam[sec.team] = []; order.push(sec.team); }
+    byTeam[sec.team].push(sec);
+  });
+  el.innerHTML = order.map(teamKey => {
+    const secs = byTeam[teamKey];
+    const teamName = TEAM_DISPLAY[teamKey] || secs[0].title;
+    const cls = secs[0].cls;
+    const cardId = secs[0].id;               // 첫 파트 섹션 id를 카드 앵커로(탭 유지)
+    const hasParts = secs.some(s => String(s.part || "").trim());
+    if (hasParts) {
+      // 수도권세일즈팀 등: 요약 제거, 파트를 볼드 소제목(.part-label)으로 구분
+      const body = secs.map((s, i) => `
+          <div class="part-group"${i > 0 ? ` id="${s.id}"` : ""}>
+            <div class="part-label">${escape(s.part)}</div>
+            <div class="dept-table-wrap">${renderDeptTable(s.items)}</div>
+          </div>`).join("");
+      return `
+      <section class="team-block" id="${cardId}">
+        <header class="team-header ${cls}"><h2>${escape(teamName)}</h2></header>
+        <div class="team-body ${cls}">${body}</div>
+      </section>`;
+    }
+    // 파트 없는 팀(지역세일즈 등): 기존과 동일(요약 유지)
+    const s = secs[0];
+    return `
+      <section class="team-block team-block-solo" id="${s.id}">
+        <header class="team-header ${cls}"><h2>${escape(teamName)}</h2></header>
+        <div class="team-summary">${escape(s.summary)}</div>
+        <div class="team-body ${cls}">
+          <div class="dept-table-wrap">${renderDeptTable(s.items)}</div>
         </div>
-      </section>
-    `).join("");
+      </section>`;
+  }).join("");
 
   el.querySelectorAll(".basis-i").forEach(b => {
     const open = () => openProgressBasis(b.dataset.task, b.dataset.pct, b.dataset.basis);
