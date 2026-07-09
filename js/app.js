@@ -1,5 +1,10 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.18
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.19
+ *
+ * v3.19 변경
+ *  - 부서별 주간 보고에 마케팅전략팀(하드코딩) 추가 — js/mkt-team-data.js(MKT_TEAM)를 맨 아래 카드로 append(DI/온라인유통/물류/CS 파트). 원본 form/xlsx.
+ *  - renderDeptTable 열 라벨 파라미터화(headers) — 팀별 상이 지원. 마케팅전략팀은 진도율/이슈 사항/사유,해결책 라벨.
+ *  - 수도권세일즈팀 열 라벨 문구 교체: 진행사항→(금주)진행사항, 예정사항→(차주)예정사항(DEPT_HEADERS_DEFAULT).
  *
  * v3.18 변경
  *  - 부서별 주간 보고: 파트별 카드 → 팀별 카드로 재편. 수도권세일즈팀 1개 카드 안에서 영업1파트·영업2파트를 볼드 소제목(.part-label)으로 구분. 팀 요약문구(team-summary) 제거(수도권). 탭 앵커(#sales-part1=카드/#sales-part2=영업2파트 소제목) 유지. 지역세일즈팀은 종전대로.
@@ -559,7 +564,7 @@ function renderTeams(sections) {
     if (!byTeam[sec.team]) { byTeam[sec.team] = []; order.push(sec.team); }
     byTeam[sec.team].push(sec);
   });
-  el.innerHTML = order.map(teamKey => {
+  let html = order.map(teamKey => {
     const secs = byTeam[teamKey];
     const teamName = TEAM_DISPLAY[teamKey] || secs[0].title;
     const cls = secs[0].cls;
@@ -590,11 +595,31 @@ function renderTeams(sections) {
       </section>`;
   }).join("");
 
+  // 하드코딩 팀(마케팅전략팀) — 구글시트가 아니라 js/mkt-team-data.js에서 읽어 맨 아래 append
+  if (typeof MKT_TEAM !== "undefined" && MKT_TEAM && MKT_TEAM.parts) {
+    html += renderHardcodedTeam(MKT_TEAM);
+  }
+  el.innerHTML = html;
+
   el.querySelectorAll(".basis-i").forEach(b => {
     const open = () => openProgressBasis(b.dataset.task, b.dataset.pct, b.dataset.basis);
     b.addEventListener("click", open);
     b.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
   });
+}
+
+// 하드코딩 팀(마케팅전략팀 등) 렌더 — 수도권세일즈팀과 동일 구성(팀 카드 + 파트 볼드 소제목), 열 라벨은 tm.headers 사용
+function renderHardcodedTeam(tm) {
+  const body = (tm.parts || []).map((p, i) => `
+          <div class="part-group"${i > 0 ? ` id="${escape(p.id)}"` : ""}>
+            <div class="part-label">${escape(p.part)}</div>
+            <div class="dept-table-wrap">${renderDeptTable(p.items, tm.headers)}</div>
+          </div>`).join("");
+  return `
+      <section class="team-block" id="${escape(tm.id)}">
+        <header class="team-header ${tm.cls || "t-sales"}"><h2>${escape(tm.name)}</h2></header>
+        <div class="team-body ${tm.cls || "t-sales"}">${body}</div>
+      </section>`;
 }
 
 // 진척율 판단근거 레이어창 (타이틀 고정 + 본문 세로 스크롤)
@@ -626,8 +651,12 @@ function openProgressBasis(task, pct, basis) {
   m.classList.add("open");
 }
 
-// 부서별 주간 보고 — 파트별 표(업무·목적·시작일·종료일·진척율·진행사항·지연사유·예정사항)
-function renderDeptTable(items) {
+// 부서별 주간 보고 기본 헤더(수도권세일즈팀 등). 진행사항→(금주)진행사항, 예정사항→(차주)예정사항
+const DEPT_HEADERS_DEFAULT = ["업무","목적","시작일","종료일","진척율","(금주)진행사항","지연사유","(차주)예정사항"];
+
+// 부서별 주간 보고 — 파트별 표. headers로 열 라벨 커스터마이즈(팀별 상이 가능)
+function renderDeptTable(items, headers) {
+  const H = headers || DEPT_HEADERS_DEFAULT;
   const cell = s => { const t = String(s == null ? "" : s).trim(); return t ? nlbr(t) : "-"; };
   const rows = (items || []).map(it => {
     const title = String(it.title || "");
@@ -653,8 +682,8 @@ function renderDeptTable(items) {
         <col style="width:7%"/><col style="width:19%"/><col style="width:14%"/><col style="width:18%"/>
       </colgroup>
       <thead><tr>
-        <th>업무</th><th>목적</th><th class="c-date">시작일</th><th class="c-date">종료일</th>
-        <th class="c-prog">진척율</th><th>진행사항</th><th>지연사유</th><th>예정사항</th>
+        <th>${escape(H[0])}</th><th>${escape(H[1])}</th><th class="c-date">${escape(H[2])}</th><th class="c-date">${escape(H[3])}</th>
+        <th class="c-prog">${escape(H[4])}</th><th>${escape(H[5])}</th><th>${escape(H[6])}</th><th>${escape(H[7])}</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
