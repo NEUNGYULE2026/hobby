@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.24
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.25
+ *
+ * v3.25 변경
+ *  - 본부 핵심 과제: 목표/실적이 텍스트(수치 아님)인 KPI는 달성률 막대 대신 깔끔한 라벨-값(목표/실적) 레이아웃으로 렌더(isTextKpi, .kpi-textbox). 원문은 Code.gs v3.8의 targetRaw/currentRaw. style.css v3.15.
  *
  * v3.24 변경
  *  - (고3영어/레이아웃 X) '최종 목표' 값(41.7%) 헤드라인 복원. 단계 스텝은 계속 미표기, 📌 배너·근거·선택교과 영업현황 유지. (.kpi-goalrow CSS는 미사용 상태로 잔존)
@@ -80,7 +83,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyzY2CSUGyQm9vsYq1wh9alBUjUu8JZRPyxOG4EKAd4aQrB0vasmJAfAIxmuBRjdg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwsWXxE_cDwEE1YjKFpP7oimi65Gahj4eX60ogeGm6kckLhVIa7B91YFe6SxShQ9p9C/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -278,6 +281,13 @@ const STATUS_MAP = {
 
 function fmtNum(n){ return (n==null) ? "-" : Number(n).toLocaleString("ko-KR"); }
 
+// 목표/실적이 수치가 아니라 텍스트로 들어온 KPI 판정 (숫자 파싱 실패 + 원문 텍스트 존재)
+function isTextKpi(k){
+  const tText = (k.target == null)  && !!(k.targetRaw  && String(k.targetRaw).trim());
+  const cText = (k.current == null) && !!(k.currentRaw && String(k.currentRaw).trim());
+  return tText || cText;
+}
+
 // (고3 영어) 점유율 카드 판정 — 구글시트 detailSheet 값과 무관하게 공교육 레이어를 띄운다.
 // 시트 H열(detailSheet)이 '공교육'이거나, 카드명이 고3영어 패턴이면 GONGGYO 전용 레이어로 연결(하드코딩 노출).
 function isGonggyoKpi(k){
@@ -317,6 +327,15 @@ function renderKpis(kpis) {
           ${basisBtn}
         </div>
         <div class="kpi-due">📌 ${escape(dueLabel)}</div>`;
+    } else if (isTextKpi(k)) {
+      // 목표/실적이 텍스트 → 달성률 막대 대신 깔끔한 라벨-값(목표/실적) 레이아웃
+      const tv = nlbr(k.targetRaw) || "-";
+      const cv = nlbr(k.currentRaw) || "-";
+      body = `
+        <div class="kpi-textbox">
+          <div class="kpi-trow"><span class="kpi-tlab">목표</span><span class="kpi-tval">${tv}</span></div>
+          <div class="kpi-trow"><span class="kpi-tlab kpi-tlab-cur">실적</span><span class="kpi-tval">${cv}</span></div>
+        </div>`;
     } else {
       const rate = (k.rate == null) ? 0 : k.rate;
       const barW = Math.max(0, Math.min(100, rate));
