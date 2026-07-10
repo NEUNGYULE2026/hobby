@@ -62,7 +62,7 @@ const MKT_TEAM = {
           title: "네이버 스마트스토어 운영",
           purpose: "SKU 확대·리뷰 활성화·쇼핑광고 통한 D2C 매출 성장",
           startDate: "07.06", endDate: "07.10", progress: 80,
-          progressNote: "- 7월(7/1~7/8) 판매부수 201부 / 매출액 약 3백10만원\n- 해당 기간 ROAS 539%",
+          progressNote: "- 7월(7/1~7/8) 판매부수 201부 / 매출액 약 3백10만원\n- 해당 기간 ROAS 827%",
           delay: "방학, 2학기 대비 신규 유입 및 구매 증가",
           upcoming: "7월 중 추이 분석 및 광고 효율 지속 점검"
         }
