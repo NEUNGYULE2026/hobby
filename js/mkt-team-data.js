@@ -18,7 +18,7 @@ const MKT_TEAM = {
       part: "DI파트", id: "mkt-di",
       items: [
         {
-          title: "개정교재 불용교재 감축 관련",
+          title: "불용재고 감축",
           purpose: "그래머인사이드 온라인채널 수요예측을 통한 추가 긴급 제작 판단",
           startDate: "07.09", endDate: "07.13", progress: 50,
           progressNote: "- 주요 온라인채널 그래머인사이드 수요예측(7~8월), 실판매량 및 MD 협의 등\n→ 추가제작 수량 판단 후 긴급 제작 예정",
