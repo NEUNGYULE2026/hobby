@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.31
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.32
+ *
+ * v3.32 변경
+ *  - 매출현황 2단 구조 렌더(ms.twoTier): 팀/파트 | 목표(총출고·반품·순매출액) | 실적(총출고·반품·순매출액) | 진척율 | 증감사유. 목표/실적 경계 세로 구분선(.gsep, style.css v3.19). 구 1단 레이아웃은 기존 렌더 유지(자동 분기). forecastTotal도 2단 셀. buildTrendOverride는 shipped=실적총출고로 계속 동작.
  *
  * v3.31 변경
  *  - 저작권·리플릿 최신월(7월*)도 실적 연동: buildTrendOverride가 매출현황 행에서 /저작권/(마케팅전략팀 저작권)·/리플릿/(제작팀 리플릿(제작)) 총출고를 추출해 effY26 오버라이드. 시트 총출고 없으면 폴백 0 유지.
@@ -102,7 +105,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbwmu4A94bAVmyn_p92Dnidf0IFS1NKS0wbuakFRmwOMuxWIH-hdbYu4Hdp_6wri89c/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbw8u9F3lTB5RFt8VZfhhsVfWr43WQsYsk5RAqi--P1b_E1S0RRin1FcbAv-LzTtCWEq/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -488,58 +491,93 @@ function renderMonthlySales(ms) {
 
   // 표 라벨은 시트의 [...] 라벨이 있으면 그걸 우선 사용, 없으면 섹션 제목
   const tableTitle = ms.tableLabel || ms.title || "월별 매출현황";
-  // 컬럼 헤더도 시트의 헤더 행을 그대로 사용 (없으면 기본값)
-  const h = ms.headers || {
-    team: '팀', target: '1Q 목표 매출액', shipped: '총출고',
-    returns: '반품', net: '순매출액', progress: '진척율'
-  };
+  const h = ms.headers || {};
+  const twoTier = !!ms.twoTier;
 
-  let bodyRows = rows.map(r => `
-    <tr class="${r.type}">
-      <td>${escape(r.label)}</td>
-      <td class="num">${fmt2(r.target)}</td>
-      <td class="num">${fmt2(r.shipped)}</td>
-      <td class="num">${fmt2(r.returns)}</td>
-      <td class="num">${fmt2(r.net)}</td>
-      ${pctCell(r.progress, r.type === 'normal' ? pctCls(r.progress) : '')}
-      ${reasonCell(r.remark)}
-    </tr>
-  `).join("");
-
-  // 월별 마감 예상매출 합계 행 (있으면 추가)
-  if (ms.forecastTotal) {
-    const ft = ms.forecastTotal;
-    bodyRows += `
-      <tr class="forecast-total">
-        <td>${escape(ft.label || "월마감 예상매출 합계")}</td>
-        <td class="num">${fmt2(ft.target)}</td>
-        <td class="num">${fmt2(ft.shipped)}</td>
-        <td class="num">${fmt2(ft.returns)}</td>
-        <td class="num">${fmt2(ft.net)}</td>
-        ${pctCell(ft.progress, '')}
-        ${reasonCell(forecastReason)}
-      </tr>
-    `;
+  let tableHtml;
+  if (twoTier) {
+    // 신 2단: 팀/파트 | 목표(총출고·반품·순매출액) | 실적(총출고·반품·순매출액) | 진척율 | 증감사유
+    const rowCells = (o, pcls) =>
+      `<td>${escape(o.label)}</td>`
+      + `<td class="num">${fmt2(o.targetShipped)}</td><td class="num">${fmt2(o.targetReturns)}</td><td class="num">${fmt2(o.targetNet)}</td>`
+      + `<td class="num gsep">${fmt2(o.shipped)}</td><td class="num">${fmt2(o.returns)}</td><td class="num">${fmt2(o.net)}</td>`
+      + pctCell(o.progress, pcls);
+    let body = rows.map(r => `<tr class="${r.type}">${rowCells(r, r.type === 'normal' ? pctCls(r.progress) : '')}${reasonCell(r.remark)}</tr>`).join("");
+    if (ms.forecastTotal) {
+      const ft = ms.forecastTotal;
+      body += `<tr class="forecast-total">${rowCells({ label: ft.label || "월마감 예상매출 합계", targetShipped: ft.targetShipped, targetReturns: ft.targetReturns, targetNet: ft.targetNet, shipped: ft.shipped, returns: ft.returns, net: ft.net, progress: ft.progress }, '')}${reasonCell(forecastReason)}</tr>`;
+    }
+    const cg = showReason
+      ? `<col style="width:20%"/><col style="width:10%"/><col style="width:9%"/><col style="width:11%"/><col style="width:10%"/><col style="width:9%"/><col style="width:11%"/><col style="width:11%"/><col style="width:9%"/>`
+      : `<col style="width:22%"/><col style="width:11%"/><col style="width:10%"/><col style="width:12%"/><col style="width:11%"/><col style="width:10%"/><col style="width:12%"/><col style="width:12%"/>`;
+    const sN = escape(h.net || '순매출액'), sS = escape(h.shipped || '총출고'), sR = escape(h.returns || '반품');
+    tableHtml = `
+      <table class="sales-table sales-2tier">
+        <colgroup>${cg}</colgroup>
+        <thead>
+          <tr>
+            <th rowspan="2">${escape(h.team || '팀 / 파트')}</th>
+            <th colspan="3" class="grp">${escape(h.targetGroup || '목표')}</th>
+            <th colspan="3" class="grp gsep">${escape(h.actualGroup || '실적')}</th>
+            <th rowspan="2" class="num">${escape(h.progress || '진척율')}</th>
+            ${showReason ? `<th rowspan="2" class="reason-col">증감사유</th>` : ""}
+          </tr>
+          <tr>
+            <th class="num">${sS}</th><th class="num">${sR}</th><th class="num">${sN}</th>
+            <th class="num gsep">${sS}</th><th class="num">${sR}</th><th class="num">${sN}</th>
+          </tr>
+        </thead>
+        <tbody>${body}</tbody>
+      </table>`;
+  } else {
+    // 구 1단: 팀 | 목표매출액 | 총출고 | 반품 | 순매출액 | 진척율 | 증감사유
+    const hh = { team: h.team || '팀', target: h.target || '1Q 목표 매출액', shipped: h.shipped || '총출고', returns: h.returns || '반품', net: h.net || '순매출액', progress: h.progress || '진척율' };
+    let body = rows.map(r => `
+      <tr class="${r.type}">
+        <td>${escape(r.label)}</td>
+        <td class="num">${fmt2(r.target)}</td>
+        <td class="num">${fmt2(r.shipped)}</td>
+        <td class="num">${fmt2(r.returns)}</td>
+        <td class="num">${fmt2(r.net)}</td>
+        ${pctCell(r.progress, r.type === 'normal' ? pctCls(r.progress) : '')}
+        ${reasonCell(r.remark)}
+      </tr>`).join("");
+    if (ms.forecastTotal) {
+      const ft = ms.forecastTotal;
+      body += `
+        <tr class="forecast-total">
+          <td>${escape(ft.label || "월마감 예상매출 합계")}</td>
+          <td class="num">${fmt2(ft.target)}</td>
+          <td class="num">${fmt2(ft.shipped)}</td>
+          <td class="num">${fmt2(ft.returns)}</td>
+          <td class="num">${fmt2(ft.net)}</td>
+          ${pctCell(ft.progress, '')}
+          ${reasonCell(forecastReason)}
+        </tr>`;
+    }
+    const cg = showReason
+      ? `<col style="width:27%"/><col style="width:13%"/><col style="width:11%"/><col style="width:11%"/><col style="width:13%"/><col style="width:13%"/><col style="width:12%"/>`
+      : `<col style="width:32%"/><col style="width:14%"/><col style="width:12%"/><col style="width:12%"/><col style="width:15%"/><col style="width:15%"/>`;
+    tableHtml = `
+      <table class="sales-table">
+        <colgroup>${cg}</colgroup>
+        <thead><tr>
+          <th>${escape(hh.team)}</th>
+          <th class="num">${escape(hh.target)}</th>
+          <th class="num">${escape(hh.shipped)}</th>
+          <th class="num">${escape(hh.returns)}</th>
+          <th class="num">${escape(hh.net)}</th>
+          <th class="num">${escape(hh.progress)}</th>
+          ${showReason ? `<th class="reason-col">증감사유</th>` : ""}
+        </tr></thead>
+        <tbody>${body}</tbody>
+      </table>`;
   }
 
   el.innerHTML = `
     <div class="sales-block">
       <h3>${escape(tableTitle)}</h3>
-      <table class="sales-table">
-        <colgroup>${showReason
-          ? `<col style="width:27%"/><col style="width:13%"/><col style="width:11%"/><col style="width:11%"/><col style="width:13%"/><col style="width:13%"/><col style="width:12%"/>`
-          : `<col style="width:32%"/><col style="width:14%"/><col style="width:12%"/><col style="width:12%"/><col style="width:15%"/><col style="width:15%"/>`}</colgroup>
-        <thead><tr>
-          <th>${escape(h.team)}</th>
-          <th class="num">${escape(h.target)}</th>
-          <th class="num">${escape(h.shipped)}</th>
-          <th class="num">${escape(h.returns)}</th>
-          <th class="num">${escape(h.net)}</th>
-          <th class="num">${escape(h.progress)}</th>
-          ${showReason ? `<th class="reason-col">증감사유</th>` : ""}
-        </tr></thead>
-        <tbody>${bodyRows}</tbody>
-      </table>
+      ${tableHtml}
       ${ms.note ? `<div class="sales-note">${escape(ms.note)}</div>` : ""}
       ${buildTrendExpander()}
     </div>
