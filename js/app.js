@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.32
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.33
+ *
+ * v3.33 변경
+ *  - 매출현황 2단 헤더 정돈: 그룹 경계 세로 구분선을 팀|목표·목표|실적·실적|진척율 3곳으로(각 그룹 첫 셀·진척율에 .gsep), 목표 컬럼 옅은 음영(.tgt), 하위헤더 보조 톤(.sub). style.css v3.20.
  *
  * v3.32 변경
  *  - 매출현황 2단 구조 렌더(ms.twoTier): 팀/파트 | 목표(총출고·반품·순매출액) | 실적(총출고·반품·순매출액) | 진척율 | 증감사유. 목표/실적 경계 세로 구분선(.gsep, style.css v3.19). 구 1단 레이아웃은 기존 렌더 유지(자동 분기). forecastTotal도 2단 셀. buildTrendOverride는 shipped=실적총출고로 계속 동작.
@@ -499,9 +502,9 @@ function renderMonthlySales(ms) {
     // 신 2단: 팀/파트 | 목표(총출고·반품·순매출액) | 실적(총출고·반품·순매출액) | 진척율 | 증감사유
     const rowCells = (o, pcls) =>
       `<td>${escape(o.label)}</td>`
-      + `<td class="num">${fmt2(o.targetShipped)}</td><td class="num">${fmt2(o.targetReturns)}</td><td class="num">${fmt2(o.targetNet)}</td>`
+      + `<td class="num tgt gsep">${fmt2(o.targetShipped)}</td><td class="num tgt">${fmt2(o.targetReturns)}</td><td class="num tgt">${fmt2(o.targetNet)}</td>`
       + `<td class="num gsep">${fmt2(o.shipped)}</td><td class="num">${fmt2(o.returns)}</td><td class="num">${fmt2(o.net)}</td>`
-      + pctCell(o.progress, pcls);
+      + `<td class="num gsep ${pcls}">${fmtPct(o.progress)}</td>`;
     let body = rows.map(r => `<tr class="${r.type}">${rowCells(r, r.type === 'normal' ? pctCls(r.progress) : '')}${reasonCell(r.remark)}</tr>`).join("");
     if (ms.forecastTotal) {
       const ft = ms.forecastTotal;
@@ -516,15 +519,15 @@ function renderMonthlySales(ms) {
         <colgroup>${cg}</colgroup>
         <thead>
           <tr>
-            <th rowspan="2">${escape(h.team || '팀 / 파트')}</th>
-            <th colspan="3" class="grp">${escape(h.targetGroup || '목표')}</th>
+            <th rowspan="2" class="tm">${escape(h.team || '팀 / 파트')}</th>
+            <th colspan="3" class="grp gsep">${escape(h.targetGroup || '목표')}</th>
             <th colspan="3" class="grp gsep">${escape(h.actualGroup || '실적')}</th>
-            <th rowspan="2" class="num">${escape(h.progress || '진척율')}</th>
+            <th rowspan="2" class="num gsep">${escape(h.progress || '진척율')}</th>
             ${showReason ? `<th rowspan="2" class="reason-col">증감사유</th>` : ""}
           </tr>
           <tr>
-            <th class="num">${sS}</th><th class="num">${sR}</th><th class="num">${sN}</th>
-            <th class="num gsep">${sS}</th><th class="num">${sR}</th><th class="num">${sN}</th>
+            <th class="num sub tgt gsep">${sS}</th><th class="num sub tgt">${sR}</th><th class="num sub tgt">${sN}</th>
+            <th class="num sub gsep">${sS}</th><th class="num sub">${sR}</th><th class="num sub">${sN}</th>
           </tr>
         </thead>
         <tbody>${body}</tbody>

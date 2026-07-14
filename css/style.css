@@ -7,6 +7,7 @@
  * v3.14 — (고3영어) 최종목표 헤드라인·스텝 제거, 📌 배너+근거 한 줄(.kpi-goalrow)
  * v3.15 — 텍스트형 KPI(목표/실적 텍스트) 라벨-값 레이아웃(.kpi-textbox)
  * v3.19 — 매출현황 2단 헤더(.sales-2tier): 목표/실적 그룹 헤더 중앙정렬 + 경계 세로 구분선(.gsep)
+ * v3.20 — 2단 헤더 정돈: 그룹 라벨 볼드·중앙, 하위헤더 보조 톤(.sub), 목표 컬럼 옅은 음영(.tgt), 경계 3곳 구분선
  * v3.16 — KPI 카드 flex 세로 구조(같은 줄 높이 통일 + 하단 배지/버튼 정렬)
  * v3.17 — 텍스트형 KPI 달성율 컴팩트 인라인 미니바(.kpi-trate)
  * v3.18 — 달성율 미니바 여백 축소(실적 바로 아래로 올림)
@@ -359,10 +360,24 @@ a { color: inherit; text-decoration: none; }
   font-size: 12.5px;
 }
 .sales-table th.num, .sales-table td.num { text-align: right; }
-/* 매출현황 2단 헤더(목표/실적) */
-.sales-2tier th.grp { text-align: center; }
+/* 매출현황 2단 헤더(목표/실적) — 그룹 구분·정돈 */
+.sales-2tier thead th { padding-top: 9px; padding-bottom: 9px; }
+.sales-2tier th.grp {
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--text-strong);
+}
+.sales-2tier thead th.sub {           /* 하위 헤더(총출고/반품/순매출액) — 보조 느낌 */
+  font-weight: 500;
+  font-size: 11.5px;
+  color: var(--text-soft);
+}
+.sales-2tier th.tm { vertical-align: middle; }
+/* 그룹 경계 세로 구분선 — 팀|목표 · 목표|실적 · 실적|진척율 (표 전체 높이) */
 .sales-2tier th.gsep, .sales-2tier td.gsep { border-left: 1px solid var(--border-strong); }
-.sales-2tier thead th { padding-top: 8px; padding-bottom: 8px; }
+/* 목표 그룹 컬럼 옅은 음영(실적=흰색과 구분) */
+.sales-2tier tbody tr.normal td.tgt { background: #F6F9FC; }
 .sales-table td {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
