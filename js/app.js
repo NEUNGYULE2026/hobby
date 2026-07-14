@@ -2,7 +2,7 @@
  * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.35
  *
  * v3.35 변경
- *  - 매출현황 2단 진척율 헤더 아래에 '총출고 기준' 보조 라벨(.prog-basis) 추가 — 진척율 산정 기준 명시. style.css v3.21.
+ *  - 매출현황 2단 진척율 헤더 아래에 '(총출고 기준)' 보조 라벨(.prog-basis) 추가 — 진척율 산정 기준 명시. style.css v3.21.
  *
  * v3.34 변경
  *  - 매출현황 표 안 제목(h3, 예 '7월 매출현황 (단위: 억)') 제거 — 섹션 헤더 '월별 매출현황'과 중복. tableTitle 변수 제거.
@@ -526,7 +526,7 @@ function renderMonthlySales(ms) {
             <th rowspan="2" class="tm">${escape(h.team || '팀 / 파트')}</th>
             <th colspan="3" class="grp gsep">${escape(h.targetGroup || '목표')}</th>
             <th colspan="3" class="grp gsep">${escape(h.actualGroup || '실적')}</th>
-            <th rowspan="2" class="num gsep prog-th">${escape(h.progress || '진척율')}<span class="prog-basis">총출고 기준</span></th>
+            <th rowspan="2" class="num gsep prog-th">${escape(h.progress || '진척율')}<span class="prog-basis">(총출고 기준)</span></th>
             ${showReason ? `<th rowspan="2" class="reason-col">증감사유</th>` : ""}
           </tr>
           <tr>
