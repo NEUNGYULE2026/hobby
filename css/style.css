@@ -11,6 +11,7 @@
  * v3.21 — 진척율 헤더 '총출고 기준' 보조 라벨(.prog-basis)
  * v3.22 — 본부 핵심 과제 '보류' 카드 회색 음영(.kpi-hold) + '보류' 배지(.kpi-hold-badge)
  * v3.23 — 보류 카드 음영 더 진하게 + 세부보기 버튼 동일 톤 처리
+ * v3.24 — 보류 카드 세부보기 버튼 돋보기(🔍) 흑백(filter: grayscale)
  * v3.16 — KPI 카드 flex 세로 구조(같은 줄 높이 통일 + 하단 배지/버튼 정렬)
  * v3.17 — 텍스트형 KPI 달성율 컴팩트 인라인 미니바(.kpi-trate)
  * v3.18 — 달성율 미니바 여백 축소(실적 바로 아래로 올림)
@@ -318,7 +319,8 @@ a { color: inherit; text-decoration: none; }
 .kpi-card.kpi-hold .kpi-bar > i,
 .kpi-card.kpi-hold .kpi-trate-bar > i { background: #97A3B0 !important; }
 .kpi-card.kpi-hold .kpi-stage { background: #CBD3DB; color: #5F6B78; }
-.kpi-card.kpi-hold .detail-btn { color: #5A6672; border-color: #AEB8C2; background: #CBD3DB; }
+/* 보류 카드 세부보기 버튼 — 회색 톤 + 돋보기(🔍 이모지) 흑백(grayscale) */
+.kpi-card.kpi-hold .detail-btn { color: #5A6672; border-color: #AEB8C2; background: #CBD3DB; filter: grayscale(100%); }
 .kpi-hold-badge {
   display: inline-block;
   margin-left: 6px;
