@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.36
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.37
+ *
+ * v3.37 변경
+ *  - 본부 핵심 과제: 비고 '보류' KPI 카드에 `.kpi-hold`(회색 음영) + '보류' 배지. 내용·수치는 그대로, 표시만 무채색으로 구분(프로젝트 홀딩). style.css v3.22.
  *
  * v3.36 변경
  *  - 마케팅전략팀·제작팀 구글시트 연동(7/8번 섹션). resolveDeptTeam이 주차별로 렌더 객체 결정: M7-W3(703)~ 시트(d.mktTeam·d.productionTeam), M7-W2(702) 하드코딩(MKT_TEAM·PRODUCTION_TEAM), 그 전 미노출. renderTeams(sections, extraTeams)로 일반화, 탭 노출도 resolve 결과 기반. 표 헤더는 하드코딩 headers 재사용.
@@ -117,7 +120,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbxphB7FGXSbWLfgnQ1A-4WY09DW3YiybqIftHYKFLrMPjKzLZ1FmodWZL6RAu-UaTIu/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzAHm_qh6gZqAsX2ZN7VmKEEhqoi0H5ZkyZnnLB-QR0EdAS7T92jcLarU0pyNsHdu7v/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -424,9 +427,12 @@ function renderKpis(kpis) {
         <div class="kpi-bar ${barW>=100?"full":""}"><i style="width:${barW}%"></i></div>
         <div class="kpi-bar-meta"><span>현재 <b>${fmtNum(k.current)}${escape(k.unit||"")}</b></span><span>목표 <b>${fmtNum(k.target)}${escape(k.unit||"")}</b></span></div>`;
     }
+    // 비고 '보류' → 회색 음영(현상태 유지, 프로젝트 홀딩 구분). 배지 표기.
+    const onHold = k.onHold === true || /보류/.test(String(k.note || ""));
+    const holdBadge = onHold ? ` <span class="kpi-hold-badge">보류</span>` : "";
     return `
-      <div class="kpi-card">
-        <p class="kpi-name">${escape(k.name)}</p>
+      <div class="kpi-card${onHold ? " kpi-hold" : ""}">
+        <p class="kpi-name">${escape(k.name)}${holdBadge}</p>
         ${body}
         <div class="kpi-foot">${stageChip}${footBtn}</div>
       </div>`;
