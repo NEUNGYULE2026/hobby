@@ -1,5 +1,11 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.39
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.41
+ *
+ * v3.41 변경
+ *  - 출고수량 캡션 '공급율10 제외' 뒤 🔍 아이콘 → 클릭 시 팝업(openQty10Modal): 제외 물량(출판중고등·공급율10·납품·수량>0) 월별 25 vs 26 비교표. 데이터 = trend-data.js QTY10_DETAIL. style.css v3.26.
+ *
+ * v3.40 변경
+ *  - 출고수량 범례/캡션 문구 '영어=참고서(중고등)+수험영어' → '영어=중고등+수험'.
  *
  * v3.39 변경
  *  - 추세 기본 지표를 총매출→출고수량으로 변경(TREND_QTY 있으면). 토글(.tseg) 활성 탭 브랜드 블루 채움(style.css v3.25).
@@ -1190,7 +1196,7 @@ function trendCfg() {
   if (typeof TREND_QTY !== "undefined" && trendState.metric === "출고수량") {
     return {
       data: TREND_QTY, groups: ["전체", "영어", "B&G", "OUP"], div: 10000, unit: "만", override: false,
-      legend: '<span><b>영어</b> = 참고서(중고등)+수험영어</span><span><b>B&amp;G</b> = ELT-A · <b>OUP</b> = ELT-B</span>',
+      legend: '<span><b>영어</b> = 중고등+수험</span><span><b>B&amp;G</b> = ELT-A · <b>OUP</b> = ELT-B</span>',
       titleBar: "월별 출고수량 (26 vs 25)", titleCum: "연누적 출고수량 (26 vs 25)",
     };
   }
@@ -1276,8 +1282,49 @@ function renderTrendControls(exp) {
   const cap = exp.querySelector("#trend-cap");
   if (cap) {
     const extra = cfg.override ? " · 26년 최종월은 구글시트 파트별 총출고, 25년 동월은 동기간(같은 일자) 컷" : "";
-    cap.textContent = String(cfg.data.cutNote || "") + " · 기준: " + String(cfg.data.basis || "") + extra;
+    const base = String(cfg.data.cutNote || "") + " · 기준: " + String(cfg.data.basis || "") + extra;
+    if (trendState.metric === "출고수량" && typeof QTY10_DETAIL !== "undefined") {
+      // '공급율10 제외' 문구 뒤에 돋보기 → 제외 물량 월별(25 vs 26) 팝업
+      cap.innerHTML = escape(base).replace("공급율10 제외",
+        '공급율10 제외 <button class="cap-detail-btn" type="button" id="qty10-btn" aria-label="공급율10 제외 상세 보기" title="공급율10 제외 상세">🔍</button>');
+      const qb = cap.querySelector("#qty10-btn");
+      if (qb) qb.addEventListener("click", openQty10Modal);
+    } else {
+      cap.textContent = base;
+    }
   }
+}
+
+// 공급율10 제외 물량 월별(25 vs 26) 팝업 — 손익센터 출판사업(중고등)·납품·매출수량>0
+function openQty10Modal() {
+  if (typeof QTY10_DETAIL === "undefined") return;
+  const q = QTY10_DETAIL, nf = n => Number(n).toLocaleString("ko-KR");
+  let t25 = 0, t26 = 0, body = "";
+  for (let i = 0; i < 12; i++) {
+    const v25 = q.y25[i] || 0;
+    const v26 = (i < (q.y26 ? q.y26.length : 0)) ? (q.y26[i] || 0) : null;
+    t25 += v25; if (v26 != null) t26 += v26;
+    body += `<tr><td>${i + 1}월</td><td class="num">${nf(v25)}</td><td class="num">${v26 == null ? "-" : nf(v26)}</td></tr>`;
+  }
+  const html = `
+    <table class="q10-table">
+      <thead><tr><th>월</th><th class="num">2025</th><th class="num">2026</th></tr></thead>
+      <tbody>${body}</tbody>
+      <tfoot><tr><td>합계</td><td class="num">${nf(t25)}</td><td class="num">${nf(t26)}</td></tr></tfoot>
+    </table>
+    <p class="q10-note">손익센터 출판사업(중고등) · 공급율 10 · 납품·매출수량&gt;0 (출고수량 집계에서 제외한 물량, 단위: 부). 26년은 6월까지.</p>`;
+  let m = document.getElementById("qty10-modal");
+  if (!m) {
+    m = document.createElement("div"); m.id = "qty10-modal"; m.className = "reason-modal";
+    m.innerHTML = `<div class="reason-modal-backdrop"></div><div class="reason-modal-box" role="dialog" aria-modal="true" aria-label="공급율10 제외 상세"><div class="reason-modal-head"><span class="reason-modal-title">공급율10 제외 출고수량 (25 vs 26)</span><button class="reason-modal-close" type="button" aria-label="닫기">&times;</button></div><div class="reason-modal-body q10-body"></div></div>`;
+    document.body.appendChild(m);
+    const close = () => m.classList.remove("open");
+    m.querySelector(".reason-modal-backdrop").addEventListener("click", close);
+    m.querySelector(".reason-modal-close").addEventListener("click", close);
+    document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+  }
+  m.querySelector(".q10-body").innerHTML = html;
+  m.classList.add("open");
 }
 
 function bindTrendExpander(scope) {
