@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.38
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.39
+ *
+ * v3.39 변경
+ *  - 추세 기본 지표를 총매출→출고수량으로 변경(TREND_QTY 있으면). 토글(.tseg) 활성 탭 브랜드 블루 채움(style.css v3.25).
  *
  * v3.38 변경
  *  - 추세 패널 상위 탭 신설: '총매출'(기존, TREND_DATA·억) / '출고수량'(신규, TREND_QTY·만 부). trendCfg()로 지표별 데이터·그룹·단위·오버라이드 분기, effY26→trendSeries 일반화(출고수량은 오버라이드 없음). 그룹 버튼·범례·캡션은 renderTrendControls가 지표별 동적 구성. 출고수량 그룹=전체/영어/B&G/OUP(납품·매출수량>0, 1~6월 만월).
@@ -123,7 +126,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzAHm_qh6gZqAsX2ZN7VmKEEhqoi0H5ZkyZnnLB-QR0EdAS7T92jcLarU0pyNsHdu7v/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyerEh7AVOHLJ1L4TPeuL5USNrjbCB35QM2CcTnhAeGvaNLnlCTRZjSeHJnffWovFfS/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -1246,7 +1249,7 @@ function buildTrendExpander() {
       </div>
       <div class="trend-body">
         <div class="trend-ctrl">
-          ${(typeof TREND_QTY !== "undefined") ? `<div class="tseg tseg-metric" id="tsegM"><button type="button" data-v="총매출" class="on">총매출</button><button type="button" data-v="출고수량">출고수량</button></div>` : ""}
+          ${(typeof TREND_QTY !== "undefined") ? `<div class="tseg tseg-metric" id="tsegM"><button type="button" data-v="총매출">총매출</button><button type="button" data-v="출고수량" class="on">출고수량</button></div>` : ""}
           <div class="tseg" id="tsegG"></div>
           <div class="tseg" id="tsegP"><button type="button" data-v="월별" class="on">월별</button><button type="button" data-v="연누적">연누적</button></div>
           <div class="trend-legend" id="trend-legend"></div>
@@ -1282,8 +1285,9 @@ function bindTrendExpander(scope) {
   const exp = scope.querySelector("#trend-exp");
   if (!exp) return;
   if (trendChart) { trendChart.destroy(); trendChart = null; }
-  // 매 렌더 시 기본값으로 초기화(헤더의 하드코딩 'on'과 일치)
-  trendState.metric = "총매출"; trendState.g = "전체"; trendState.p = "월별";
+  // 매 렌더 시 기본값으로 초기화(헤더의 하드코딩 'on'과 일치). 기본 지표 = 출고수량(있으면).
+  trendState.metric = (typeof TREND_QTY !== "undefined") ? "출고수량" : "총매출";
+  trendState.g = "전체"; trendState.p = "월별";
   let rendered = false;
   const head = exp.querySelector("#trend-head");
   const toggle = () => {

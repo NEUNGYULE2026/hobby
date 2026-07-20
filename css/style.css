@@ -12,6 +12,7 @@
  * v3.22 — 본부 핵심 과제 '보류' 카드 회색 음영(.kpi-hold) + '보류' 배지(.kpi-hold-badge)
  * v3.23 — 보류 카드 음영 더 진하게 + 세부보기 버튼 동일 톤 처리
  * v3.24 — 보류 카드 세부보기 버튼 돋보기(🔍) 흑백(filter: grayscale)
+ * v3.25 — 추세 토글(.tseg) 활성 탭 브랜드 블루 채움(흰 pill→컬러)
  * v3.16 — KPI 카드 flex 세로 구조(같은 줄 높이 통일 + 하단 배지/버튼 정렬)
  * v3.17 — 텍스트형 KPI 달성율 컴팩트 인라인 미니바(.kpi-trate)
  * v3.18 — 달성율 미니바 여백 축소(실적 바로 아래로 올림)
@@ -1212,7 +1213,7 @@ a { color: inherit; text-decoration: none; }
 .trend-ctrl{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
 .tseg{display:inline-flex;background:#EDF2F7;border:1px solid var(--border);border-radius:10px;padding:3px;}
 .tseg button{border:none;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--text-soft);padding:6px 13px;border-radius:7px;cursor:pointer;}
-.tseg button.on{background:#fff;color:var(--brand-deep);box-shadow:0 1px 3px rgba(18,61,105,.12);}
+.tseg button.on{background:var(--brand);color:#fff;box-shadow:0 1px 3px rgba(18,61,105,.18);}
 .trend-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;}
 .t-chip{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:8px;background:#EEF2F6;color:var(--text-soft);}
 .t-chip.up{background:#DCFCE7;color:var(--status-good);}
