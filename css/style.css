@@ -14,6 +14,7 @@
  * v3.24 — 보류 카드 세부보기 버튼 돋보기(🔍) 흑백(filter: grayscale)
  * v3.25 — 추세 토글(.tseg) 활성 탭 브랜드 블루 채움(흰 pill→컬러)
  * v3.26 — 출고수량 캡션 공급율10 상세 팝업(.q10-table·.cap-detail-btn)
+ * v3.27 — 공급율10(유가) 팝업 폭 축소·컴팩트 정렬(.q10-box 380px)
  * v3.16 — KPI 카드 flex 세로 구조(같은 줄 높이 통일 + 하단 배지/버튼 정렬)
  * v3.17 — 텍스트형 KPI 달성율 컴팩트 인라인 미니바(.kpi-trate)
  * v3.18 — 달성율 미니바 여백 축소(실적 바로 아래로 올림)
@@ -1218,13 +1219,15 @@ a { color: inherit; text-decoration: none; }
 .trend-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;}
 .t-chip{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:8px;background:#EEF2F6;color:var(--text-soft);}
 .cap-detail-btn{border:none;background:transparent;cursor:pointer;font-size:12px;padding:0 2px;vertical-align:middle;line-height:1;}
-.q10-body{white-space:normal;}
-.q10-table{width:100%;border-collapse:collapse;font-size:13px;}
-.q10-table th,.q10-table td{padding:6px 12px;border-bottom:1px solid var(--border);}
+.reason-modal-box.q10-box{width:min(380px,calc(100vw - 32px));}
+.q10-body{white-space:normal;padding:12px 14px;}
+.q10-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.q10-table th,.q10-table td{padding:4px 12px;border-bottom:1px solid #EDF2F7;}
 .q10-table th{background:var(--bg-deep);color:var(--text-strong);font-weight:600;}
-.q10-table th.num,.q10-table td.num{text-align:right;}
-.q10-table tfoot td{font-weight:700;background:#E8EFF5;}
-.q10-note{font-size:11.5px;color:var(--text-soft);line-height:1.5;margin:10px 2px 0;}
+.q10-table th:first-child,.q10-table td:first-child{text-align:center;color:var(--text-soft);}
+.q10-table th.num,.q10-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
+.q10-table tfoot td{font-weight:700;background:#E8EFF5;border-top:1px solid var(--border-strong);border-bottom:none;}
+.q10-note{font-size:11px;color:var(--text-soft);line-height:1.45;margin:8px 2px 0;}
 .t-chip.up{background:#DCFCE7;color:var(--status-good);}
 .t-chip.down{background:#FEE2E2;color:var(--status-bad);}
 .trend-cw{position:relative;height:280px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;}

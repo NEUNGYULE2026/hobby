@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.41
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.42
+ *
+ * v3.42 변경
+ *  - 공급율10 팝업 타이틀 '유가(공급율-10%) 제외 출고수량 (25 vs 26)'로 변경, 레이어 폭 축소(380px)·표 컴팩트 정렬(월 가운데·숫자 tabular 우측, style.css v3.27).
  *
  * v3.41 변경
  *  - 출고수량 캡션 '공급율10 제외' 뒤 🔍 아이콘 → 클릭 시 팝업(openQty10Modal): 제외 물량(출판중고등·공급율10·납품·수량>0) 월별 25 vs 26 비교표. 데이터 = trend-data.js QTY10_DETAIL. style.css v3.26.
@@ -1316,7 +1319,7 @@ function openQty10Modal() {
   let m = document.getElementById("qty10-modal");
   if (!m) {
     m = document.createElement("div"); m.id = "qty10-modal"; m.className = "reason-modal";
-    m.innerHTML = `<div class="reason-modal-backdrop"></div><div class="reason-modal-box" role="dialog" aria-modal="true" aria-label="공급율10 제외 상세"><div class="reason-modal-head"><span class="reason-modal-title">공급율10 제외 출고수량 (25 vs 26)</span><button class="reason-modal-close" type="button" aria-label="닫기">&times;</button></div><div class="reason-modal-body q10-body"></div></div>`;
+    m.innerHTML = `<div class="reason-modal-backdrop"></div><div class="reason-modal-box q10-box" role="dialog" aria-modal="true" aria-label="유가(공급율-10%) 제외 상세"><div class="reason-modal-head"><span class="reason-modal-title">유가(공급율-10%) 제외 출고수량 (25 vs 26)</span><button class="reason-modal-close" type="button" aria-label="닫기">&times;</button></div><div class="reason-modal-body q10-body"></div></div>`;
     document.body.appendChild(m);
     const close = () => m.classList.remove("open");
     m.querySelector(".reason-modal-backdrop").addEventListener("click", close);
