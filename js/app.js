@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.37
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.38
+ *
+ * v3.38 변경
+ *  - 추세 패널 상위 탭 신설: '총매출'(기존, TREND_DATA·억) / '출고수량'(신규, TREND_QTY·만 부). trendCfg()로 지표별 데이터·그룹·단위·오버라이드 분기, effY26→trendSeries 일반화(출고수량은 오버라이드 없음). 그룹 버튼·범례·캡션은 renderTrendControls가 지표별 동적 구성. 출고수량 그룹=전체/영어/B&G/OUP(납품·매출수량>0, 1~6월 만월).
  *
  * v3.37 변경
  *  - 본부 핵심 과제: 비고 '보류' KPI 카드에 `.kpi-hold`(회색 음영) + '보류' 배지. 내용·수치는 그대로, 표시만 무채색으로 구분(프로젝트 홀딩). style.css v3.22.
@@ -1152,7 +1155,7 @@ function fmtNext(idx, it) {
  *  기준: 총매출(반품 제외) · AIDT만 순매출 / 26년 전일까지 vs 25년 동기간
  * ============================================================ */
 let trendChart = null;
-const trendState = { g: "전체", p: "월별" };
+const trendState = { metric: "총매출", g: "전체", p: "월별" };
 
 // 추세 26년 최종월(현재 진행월) 총출고 동적 오버라이드.
 // 구글시트 매출현황의 행별 총출고를 그룹별로 매핑: { 전체, 영업1파트, 영업2파트, 저작권, 리플릿 }(억 단위).
@@ -1179,13 +1182,30 @@ function buildTrendOverride(rows) {
   return Object.keys(ov).length ? ov : null;
 }
 
-// 그룹의 26년 시계열에서 최종월만 시트 총출고로 교체한 사본 반환(원본 불변).
-function effY26(group) {
-  const base = (TREND_DATA.series[group] || {}).y26 || [];
-  if (!trendLastOverride || trendLastOverride[group] == null || !base.length) return base;
-  const out = base.slice();
-  out[out.length - 1] = trendLastOverride[group];
-  return out;
+// 추세 지표(metric)별 설정 — 총매출(TREND_DATA, 억) / 출고수량(TREND_QTY, 만 부)
+function trendCfg() {
+  if (typeof TREND_QTY !== "undefined" && trendState.metric === "출고수량") {
+    return {
+      data: TREND_QTY, groups: ["전체", "영어", "B&G", "OUP"], div: 10000, unit: "만", override: false,
+      legend: '<span><b>영어</b> = 참고서(중고등)+수험영어</span><span><b>B&amp;G</b> = ELT-A · <b>OUP</b> = ELT-B</span>',
+      titleBar: "월별 출고수량 (26 vs 25)", titleCum: "연누적 출고수량 (26 vs 25)",
+    };
+  }
+  return {
+    data: TREND_DATA, groups: ["전체", "영업1파트", "영업2파트", "저작권", "리플릿"], div: 1, unit: "억", override: true,
+    legend: '<span><b>영업1파트</b> = 참고서(영/수/국) + 교과서 + AIDT</span><span><b>영업2파트</b> = B&amp;G + OUP</span>',
+    titleBar: "월별 매출 (26 vs 25)", titleCum: "연누적 매출 추이 (26 vs 25)",
+  };
+}
+
+// 그룹 시계열 반환. 총매출은 최신월을 시트 총출고로 교체(override), 출고수량은 원본 그대로.
+function trendSeries(group, cfg) {
+  const s = cfg.data.series[group] || {};
+  const y26 = (s.y26 || []).slice();
+  if (cfg.override && trendLastOverride && trendLastOverride[group] != null && y26.length) {
+    y26[y26.length - 1] = trendLastOverride[group];
+  }
+  return { y26: y26, y25: (s.y25 || []) };
 }
 
 // 추세 차트 값 라벨 — 막대/라인 위에 실적 수치(억, 소수1자리) 표기. 데이터셋 색상과 동일.
@@ -1226,15 +1246,35 @@ function buildTrendExpander() {
       </div>
       <div class="trend-body">
         <div class="trend-ctrl">
-          <div class="tseg" id="tsegG"><button type="button" data-v="전체" class="on">전체</button><button type="button" data-v="영업1파트">영업1파트</button><button type="button" data-v="영업2파트">영업2파트</button><button type="button" data-v="저작권">저작권</button><button type="button" data-v="리플릿">리플릿</button></div>
+          ${(typeof TREND_QTY !== "undefined") ? `<div class="tseg tseg-metric" id="tsegM"><button type="button" data-v="총매출" class="on">총매출</button><button type="button" data-v="출고수량">출고수량</button></div>` : ""}
+          <div class="tseg" id="tsegG"></div>
           <div class="tseg" id="tsegP"><button type="button" data-v="월별" class="on">월별</button><button type="button" data-v="연누적">연누적</button></div>
-          <div class="trend-legend"><span><b>영업1파트</b> = 참고서(영/수/국) + 교과서 + AIDT</span><span><b>영업2파트</b> = B&amp;G + OUP</span></div>
+          <div class="trend-legend" id="trend-legend"></div>
         </div>
         <div class="trend-chips" id="trend-chips"></div>
         <div class="trend-cw"><canvas id="trend-cv"></canvas></div>
-        <div class="trend-cap">${escape(TREND_DATA.cutNote)} · 기준: ${escape(TREND_DATA.basis)} · 26년 최종월은 구글시트 파트별 총출고, 25년 동월은 동기간(같은 일자) 컷</div>
+        <div class="trend-cap" id="trend-cap"></div>
       </div>
     </div>`;
+}
+
+// 지표(metric)에 맞춰 그룹 버튼·범례·캡션을 다시 구성(그룹 버튼은 클릭 바인딩 포함)
+function renderTrendControls(exp) {
+  const cfg = trendCfg();
+  const g = exp.querySelector("#tsegG");
+  if (g) {
+    g.innerHTML = cfg.groups.map(gr => `<button type="button" data-v="${escape(gr)}"${gr === trendState.g ? ' class="on"' : ''}>${escape(gr)}</button>`).join("");
+    g.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+      g.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
+      trendState.g = b.dataset.v; renderTrendChips(); renderTrendChart();
+    }));
+  }
+  const lg = exp.querySelector("#trend-legend"); if (lg) lg.innerHTML = cfg.legend;
+  const cap = exp.querySelector("#trend-cap");
+  if (cap) {
+    const extra = cfg.override ? " · 26년 최종월은 구글시트 파트별 총출고, 25년 동월은 동기간(같은 일자) 컷" : "";
+    cap.textContent = String(cfg.data.cutNote || "") + " · 기준: " + String(cfg.data.basis || "") + extra;
+  }
 }
 
 function bindTrendExpander(scope) {
@@ -1242,18 +1282,20 @@ function bindTrendExpander(scope) {
   const exp = scope.querySelector("#trend-exp");
   if (!exp) return;
   if (trendChart) { trendChart.destroy(); trendChart = null; }
+  // 매 렌더 시 기본값으로 초기화(헤더의 하드코딩 'on'과 일치)
+  trendState.metric = "총매출"; trendState.g = "전체"; trendState.p = "월별";
   let rendered = false;
   const head = exp.querySelector("#trend-head");
   const toggle = () => {
     exp.classList.toggle("open");
     head.setAttribute("aria-expanded", exp.classList.contains("open") ? "true" : "false");
-    if (exp.classList.contains("open") && !rendered) { rendered = true; renderTrendChips(); renderTrendChart(); }
+    if (exp.classList.contains("open") && !rendered) { rendered = true; renderTrendControls(exp); renderTrendChips(); renderTrendChart(); }
   };
   head.addEventListener("click", toggle);
   head.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
-  exp.querySelectorAll("#tsegG button").forEach(b => b.addEventListener("click", () => {
-    exp.querySelectorAll("#tsegG button").forEach(x => x.classList.remove("on")); b.classList.add("on");
-    trendState.g = b.dataset.v; renderTrendChips(); renderTrendChart();
+  exp.querySelectorAll("#tsegM button").forEach(b => b.addEventListener("click", () => {
+    exp.querySelectorAll("#tsegM button").forEach(x => x.classList.remove("on")); b.classList.add("on");
+    trendState.metric = b.dataset.v; trendState.g = "전체"; renderTrendControls(exp); renderTrendChips(); renderTrendChart();
   }));
   exp.querySelectorAll("#tsegP button").forEach(b => b.addEventListener("click", () => {
     exp.querySelectorAll("#tsegP button").forEach(x => x.classList.remove("on")); b.classList.add("on");
@@ -1261,51 +1303,52 @@ function bindTrendExpander(scope) {
   }));
 }
 
-function trendChip(label, cur, prev) {
+function trendChip(label, cur, prev, unit) {
   const diff = cur - prev, up = diff >= 0;
   const f1 = n => Number(n).toFixed(1);
   const body = (prev > 0)
-    ? `${up ? "▲" : "▼"} ${Math.abs(diff / prev * 100).toFixed(1)}% (${f1(cur)} vs ${f1(prev)}억)`
-    : `${up ? "▲" : "▼"} ${f1(Math.abs(diff))}억 (${f1(cur)} vs ${f1(prev)}억)`;
+    ? `${up ? "▲" : "▼"} ${Math.abs(diff / prev * 100).toFixed(1)}% (${f1(cur)} vs ${f1(prev)}${unit})`
+    : `${up ? "▲" : "▼"} ${f1(Math.abs(diff))}${unit} (${f1(cur)} vs ${f1(prev)}${unit})`;
   return `<span class="t-chip ${up ? "up" : "down"}">${label} ${body}</span>`;
 }
 
 function renderTrendChips() {
   const el = document.getElementById("trend-chips");
   if (!el) return;
-  const d = TREND_DATA.series[trendState.g];
-  const y26 = effY26(trendState.g);
-  const sum = a => a.reduce((x, y) => x + y, 0);
-  const li = TREND_DATA.months.length - 1;
+  const cfg = trendCfg();
+  const { y26, y25 } = trendSeries(trendState.g, cfg);
+  const div = cfg.div, sum = a => a.reduce((x, y) => x + y, 0);
+  const li = cfg.data.months.length - 1;
   el.innerHTML =
-    trendChip("연누적", sum(y26), sum(d.y25)) +
-    trendChip(TREND_DATA.months[li], y26[li], d.y25[li]);
+    trendChip("연누적", sum(y26) / div, sum(y25) / div, cfg.unit) +
+    trendChip(cfg.data.months[li], (y26[li] || 0) / div, (y25[li] || 0) / div, cfg.unit);
 }
 
 function renderTrendChart() {
   const ctx = document.getElementById("trend-cv");
   if (!ctx) return;
-  const d = TREND_DATA.series[trendState.g];
-  const y26 = effY26(trendState.g);
-  const sum = a => a.reduce((x, y) => x + y, 0);
+  const cfg = trendCfg();
+  const { y26, y25 } = trendSeries(trendState.g, cfg);
+  const div = cfg.div, unit = cfg.unit;
+  const dv = a => a.map(v => v / div);
   const cum = a => a.reduce((acc, v, i) => (acc.push((i ? acc[i - 1] : 0) + v), acc), []);
   const f1 = n => Number(n).toFixed(1);
   if (trendChart) { trendChart.destroy(); trendChart = null; }
   const opts = t => ({ responsive: true, maintainAspectRatio: false, layout: { padding: { top: 14 } },
     plugins: { title: { display: true, text: `${t} · ${trendState.g}`, color: "#243B53", font: { size: 13, weight: "600" } },
       legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } },
-      tooltip: { callbacks: { label: c => `${c.dataset.label} ${f1(c.parsed.y)}억` } } },
-    scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => v + "억" }, grid: { color: "#EDF2F7" } } } });
+      tooltip: { callbacks: { label: c => `${c.dataset.label} ${f1(c.parsed.y)}${unit}` } } },
+    scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => v + unit }, grid: { color: "#EDF2F7" } } } });
   if (trendState.p === "연누적") {
-    trendChart = new Chart(ctx, { type: "line", data: { labels: TREND_DATA.months, datasets: [
-      { label: "2026 누적", data: cum(y26), borderColor: "#1F5E92", backgroundColor: "#1F5E92", borderWidth: 2.5, tension: .25, pointRadius: 3 },
-      { label: "2025 누적", data: cum(d.y25), borderColor: "#D9A325", backgroundColor: "#D9A325", borderWidth: 2, borderDash: [6, 4], tension: .25, pointRadius: 3 }] },
-      options: opts("연누적 매출 추이 (26 vs 25)"), plugins: [trendValueLabels] });
+    trendChart = new Chart(ctx, { type: "line", data: { labels: cfg.data.months, datasets: [
+      { label: "2026 누적", data: cum(dv(y26)), borderColor: "#1F5E92", backgroundColor: "#1F5E92", borderWidth: 2.5, tension: .25, pointRadius: 3 },
+      { label: "2025 누적", data: cum(dv(y25)), borderColor: "#D9A325", backgroundColor: "#D9A325", borderWidth: 2, borderDash: [6, 4], tension: .25, pointRadius: 3 }] },
+      options: opts(cfg.titleCum), plugins: [trendValueLabels] });
   } else {
-    trendChart = new Chart(ctx, { type: "bar", data: { labels: TREND_DATA.months, datasets: [
-      { label: "2026", data: y26, backgroundColor: "#1F5E92", borderRadius: 3 },
-      { label: "2025", data: d.y25, backgroundColor: "#D9A325", borderRadius: 3 }] },
-      options: opts("월별 매출 (26 vs 25)"), plugins: [trendValueLabels] });
+    trendChart = new Chart(ctx, { type: "bar", data: { labels: cfg.data.months, datasets: [
+      { label: "2026", data: dv(y26), backgroundColor: "#1F5E92", borderRadius: 3 },
+      { label: "2025", data: dv(y25), backgroundColor: "#D9A325", borderRadius: 3 }] },
+      options: opts(cfg.titleBar), plugins: [trendValueLabels] });
   }
 }
 
