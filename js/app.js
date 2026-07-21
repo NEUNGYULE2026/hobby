@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.42
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.43
+ *
+ * v3.43 변경
+ *  - 출고수량 탭에 채널 축(전체/오프라인/온라인) 추가(구분과 기간 사이 #tsegC). TREND_QTY.series[그룹][채널] 중첩 구조, trendSeries가 채널 선택. 채널 분류=거래처코드×master(출판/ELT), 오프라인=총판·온라인=총판 외. 총매출 탭은 채널 토글 숨김.
  *
  * v3.42 변경
  *  - 공급율10 팝업 타이틀 '유가(공급율-10%) 제외 출고수량 (25 vs 26)'로 변경, 레이어 폭 축소(380px)·표 컴팩트 정렬(월 가운데·숫자 tabular 우측, style.css v3.27).
@@ -1167,7 +1170,7 @@ function fmtNext(idx, it) {
  *  기준: 총매출(반품 제외) · AIDT만 순매출 / 26년 전일까지 vs 25년 동기간
  * ============================================================ */
 let trendChart = null;
-const trendState = { metric: "총매출", g: "전체", p: "월별" };
+const trendState = { metric: "총매출", g: "전체", ch: "전체", p: "월별" };
 
 // 추세 26년 최종월(현재 진행월) 총출고 동적 오버라이드.
 // 구글시트 매출현황의 행별 총출고를 그룹별로 매핑: { 전체, 영업1파트, 영업2파트, 저작권, 리플릿 }(억 단위).
@@ -1199,7 +1202,8 @@ function trendCfg() {
   if (typeof TREND_QTY !== "undefined" && trendState.metric === "출고수량") {
     return {
       data: TREND_QTY, groups: ["전체", "영어", "B&G", "OUP"], div: 10000, unit: "만", override: false,
-      legend: '<span><b>영어</b> = 중고등+수험</span><span><b>B&amp;G</b> = ELT-A · <b>OUP</b> = ELT-B</span>',
+      hasChannel: true, channels: (TREND_QTY.channels || ["전체", "오프라인", "온라인"]),
+      legend: '<span><b>영어</b> = 중고등+수험</span><span><b>B&amp;G</b> = ELT-A · <b>OUP</b> = ELT-B</span><span>오프라인=총판 · 온라인=총판 외</span>',
       titleBar: "월별 출고수량 (26 vs 25)", titleCum: "연누적 출고수량 (26 vs 25)",
     };
   }
@@ -1211,8 +1215,10 @@ function trendCfg() {
 }
 
 // 그룹 시계열 반환. 총매출은 최신월을 시트 총출고로 교체(override), 출고수량은 원본 그대로.
+// 출고수량(hasChannel)은 series[그룹][채널], 총매출은 series[그룹].
 function trendSeries(group, cfg) {
-  const s = cfg.data.series[group] || {};
+  let s = cfg.data.series[group] || {};
+  if (cfg.hasChannel) s = s[trendState.ch] || s["전체"] || {};
   const y26 = (s.y26 || []).slice();
   if (cfg.override && trendLastOverride && trendLastOverride[group] != null && y26.length) {
     y26[y26.length - 1] = trendLastOverride[group];
@@ -1260,6 +1266,7 @@ function buildTrendExpander() {
         <div class="trend-ctrl">
           ${(typeof TREND_QTY !== "undefined") ? `<div class="tseg tseg-metric" id="tsegM"><button type="button" data-v="총매출">총매출</button><button type="button" data-v="출고수량" class="on">출고수량</button></div>` : ""}
           <div class="tseg" id="tsegG"></div>
+          <div class="tseg" id="tsegC"></div>
           <div class="tseg" id="tsegP"><button type="button" data-v="월별" class="on">월별</button><button type="button" data-v="연누적">연누적</button></div>
           <div class="trend-legend" id="trend-legend"></div>
         </div>
@@ -1280,6 +1287,21 @@ function renderTrendControls(exp) {
       g.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
       trendState.g = b.dataset.v; renderTrendChips(); renderTrendChart();
     }));
+  }
+  // 채널 토글(출고수량 전용) — 전체/오프라인/온라인
+  const ch = exp.querySelector("#tsegC");
+  if (ch) {
+    if (cfg.hasChannel) {
+      if (cfg.channels.indexOf(trendState.ch) < 0) trendState.ch = "전체";
+      ch.style.display = "";
+      ch.innerHTML = cfg.channels.map(c => `<button type="button" data-v="${escape(c)}"${c === trendState.ch ? ' class="on"' : ''}>${escape(c)}</button>`).join("");
+      ch.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+        ch.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
+        trendState.ch = b.dataset.v; renderTrendChips(); renderTrendChart();
+      }));
+    } else {
+      ch.innerHTML = ""; ch.style.display = "none";
+    }
   }
   const lg = exp.querySelector("#trend-legend"); if (lg) lg.innerHTML = cfg.legend;
   const cap = exp.querySelector("#trend-cap");
@@ -1337,7 +1359,7 @@ function bindTrendExpander(scope) {
   if (trendChart) { trendChart.destroy(); trendChart = null; }
   // 매 렌더 시 기본값으로 초기화(헤더의 하드코딩 'on'과 일치). 기본 지표 = 출고수량(있으면).
   trendState.metric = (typeof TREND_QTY !== "undefined") ? "출고수량" : "총매출";
-  trendState.g = "전체"; trendState.p = "월별";
+  trendState.g = "전체"; trendState.ch = "전체"; trendState.p = "월별";
   let rendered = false;
   const head = exp.querySelector("#trend-head");
   const toggle = () => {
@@ -1349,7 +1371,7 @@ function bindTrendExpander(scope) {
   head.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
   exp.querySelectorAll("#tsegM button").forEach(b => b.addEventListener("click", () => {
     exp.querySelectorAll("#tsegM button").forEach(x => x.classList.remove("on")); b.classList.add("on");
-    trendState.metric = b.dataset.v; trendState.g = "전체"; renderTrendControls(exp); renderTrendChips(); renderTrendChart();
+    trendState.metric = b.dataset.v; trendState.g = "전체"; trendState.ch = "전체"; renderTrendControls(exp); renderTrendChips(); renderTrendChart();
   }));
   exp.querySelectorAll("#tsegP button").forEach(b => b.addEventListener("click", () => {
     exp.querySelectorAll("#tsegP button").forEach(x => x.classList.remove("on")); b.classList.add("on");
@@ -1389,7 +1411,7 @@ function renderTrendChart() {
   const f1 = n => Number(n).toFixed(1);
   if (trendChart) { trendChart.destroy(); trendChart = null; }
   const opts = t => ({ responsive: true, maintainAspectRatio: false, layout: { padding: { top: 14 } },
-    plugins: { title: { display: true, text: `${t} · ${trendState.g}`, color: "#243B53", font: { size: 13, weight: "600" } },
+    plugins: { title: { display: true, text: `${t} · ${trendState.g}${(cfg.hasChannel && trendState.ch !== "전체") ? " · " + trendState.ch : ""}`, color: "#243B53", font: { size: 13, weight: "600" } },
       legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } },
       tooltip: { callbacks: { label: c => `${c.dataset.label} ${f1(c.parsed.y)}${unit}` } } },
     scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => v + unit }, grid: { color: "#EDF2F7" } } } });
