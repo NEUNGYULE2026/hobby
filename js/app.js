@@ -1,5 +1,9 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.45
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.46
+ *
+ * v3.46 변경
+ *  - 출고수량·영어 전용 '브랜드' 드롭다운(우측, 선택/전체/주력품목 브랜드) 신설 → TREND_QTY_BRAND.series[브랜드][채널] 필터. '선택'=미필터(영어 전체), '전체'=주력품목 전 품목, 개별=브랜드(품목번호+구+파생 통합). 채널·기간 동일 적용. 영어일 때만 노출.
+ *  - 출고수량 우측 범례(영어=·오프/온라인 정의)를 하단 캡션으로 이동. style.css v3.29(.trend-brand).
  *
  * v3.45 변경
  *  - 추세 총매출/출고수량(#tsegM)·월별/연누적(#tsegP) 탭에 .tseg-nav 부여 → 활성색 진네이비(#123D69). 중간 구분·채널 토글은 기존 브랜드 블루로 구분(style.css v3.28).
@@ -1176,7 +1180,7 @@ function fmtNext(idx, it) {
  *  기준: 총매출(반품 제외) · AIDT만 순매출 / 26년 전일까지 vs 25년 동기간
  * ============================================================ */
 let trendChart = null;
-const trendState = { metric: "총매출", g: "전체", ch: "전체", p: "월별" };
+const trendState = { metric: "총매출", g: "전체", ch: "전체", brand: "선택", p: "월별" };
 // 지표별 기본 구분 그룹 — 출고수량은 '영어', 그 외(총매출)는 '전체'
 function trendDefaultGroup(metric) { return metric === "출고수량" ? "영어" : "전체"; }
 
@@ -1225,8 +1229,14 @@ function trendCfg() {
 // 그룹 시계열 반환. 총매출은 최신월을 시트 총출고로 교체(override), 출고수량은 원본 그대로.
 // 출고수량(hasChannel)은 series[그룹][채널], 총매출은 series[그룹].
 function trendSeries(group, cfg) {
-  let s = cfg.data.series[group] || {};
-  if (cfg.hasChannel) s = s[trendState.ch] || s["전체"] || {};
+  let s;
+  // 출고수량·영어 + 브랜드 선택(≠'선택') → 브랜드 필터 데이터, 그 외 → 기존 group[channel]
+  if (cfg.hasChannel && group === "영어" && trendState.brand && trendState.brand !== "선택" && typeof TREND_QTY_BRAND !== "undefined") {
+    s = (TREND_QTY_BRAND.series[trendState.brand] || {})[trendState.ch] || {};
+  } else {
+    s = cfg.data.series[group] || {};
+    if (cfg.hasChannel) s = s[trendState.ch] || s["전체"] || {};
+  }
   const y26 = (s.y26 || []).slice();
   if (cfg.override && trendLastOverride && trendLastOverride[group] != null && y26.length) {
     y26[y26.length - 1] = trendLastOverride[group];
@@ -1293,7 +1303,7 @@ function renderTrendControls(exp) {
     g.innerHTML = cfg.groups.map(gr => `<button type="button" data-v="${escape(gr)}"${gr === trendState.g ? ' class="on"' : ''}>${escape(gr)}</button>`).join("");
     g.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
       g.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
-      trendState.g = b.dataset.v; renderTrendChips(); renderTrendChart();
+      trendState.g = b.dataset.v; trendState.brand = "선택"; renderTrendControls(exp); renderTrendChips(); renderTrendChart();
     }));
   }
   // 채널 토글(출고수량 전용) — 전체/오프라인/온라인
@@ -1311,10 +1321,26 @@ function renderTrendControls(exp) {
       ch.innerHTML = ""; ch.style.display = "none";
     }
   }
-  const lg = exp.querySelector("#trend-legend"); if (lg) lg.innerHTML = cfg.legend;
+  // 우측 영역: 출고수량·영어 → 브랜드 드롭다운, 출고수량·그 외 → 비움(범례는 하단 캡션), 총매출 → 기존 범례
+  const lg = exp.querySelector("#trend-legend");
+  if (lg) {
+    if (cfg.hasChannel && trendState.g === "영어" && typeof TREND_QTY_BRAND !== "undefined") {
+      const opts = ["선택", "전체"].concat(TREND_QTY_BRAND.brands || []);
+      lg.innerHTML = '<span class="trend-brand"><label for="trend-brand-sel">브랜드</label><select id="trend-brand-sel">'
+        + opts.map(o => `<option value="${escape(o)}"${o === trendState.brand ? ' selected' : ''}>${escape(o)}</option>`).join("")
+        + '</select></span>';
+      const sel = lg.querySelector("#trend-brand-sel");
+      if (sel) sel.addEventListener("change", () => { trendState.brand = sel.value; renderTrendChips(); renderTrendChart(); });
+    } else if (cfg.hasChannel) {
+      lg.innerHTML = "";
+    } else {
+      lg.innerHTML = cfg.legend;
+    }
+  }
   const cap = exp.querySelector("#trend-cap");
   if (cap) {
-    const extra = cfg.override ? " · 26년 최종월은 구글시트 파트별 총출고, 25년 동월은 동기간(같은 일자) 컷" : "";
+    const extra = cfg.override ? " · 26년 최종월은 구글시트 파트별 총출고, 25년 동월은 동기간(같은 일자) 컷"
+                : (cfg.hasChannel ? " · 영어=중고등+수험 · 오프라인=총판 · 온라인=총판 외" : "");
     const base = String(cfg.data.cutNote || "") + " · 기준: " + String(cfg.data.basis || "") + extra;
     if (trendState.metric === "출고수량" && typeof QTY10_DETAIL !== "undefined") {
       // '공급율10 제외' 문구 뒤에 돋보기 → 제외 물량 월별(25 vs 26) 팝업
@@ -1367,7 +1393,7 @@ function bindTrendExpander(scope) {
   if (trendChart) { trendChart.destroy(); trendChart = null; }
   // 매 렌더 시 기본값 초기화. 기본 = 출고수량 / 영어 / 전체(채널) / 월별.
   trendState.metric = (typeof TREND_QTY !== "undefined") ? "출고수량" : "총매출";
-  trendState.g = trendDefaultGroup(trendState.metric); trendState.ch = "전체"; trendState.p = "월별";
+  trendState.g = trendDefaultGroup(trendState.metric); trendState.ch = "전체"; trendState.brand = "선택"; trendState.p = "월별";
   let rendered = false;
   const head = exp.querySelector("#trend-head");
   const toggle = () => {
@@ -1379,7 +1405,7 @@ function bindTrendExpander(scope) {
   head.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
   exp.querySelectorAll("#tsegM button").forEach(b => b.addEventListener("click", () => {
     exp.querySelectorAll("#tsegM button").forEach(x => x.classList.remove("on")); b.classList.add("on");
-    trendState.metric = b.dataset.v; trendState.g = trendDefaultGroup(b.dataset.v); trendState.ch = "전체"; renderTrendControls(exp); renderTrendChips(); renderTrendChart();
+    trendState.metric = b.dataset.v; trendState.g = trendDefaultGroup(b.dataset.v); trendState.ch = "전체"; trendState.brand = "선택"; renderTrendControls(exp); renderTrendChips(); renderTrendChart();
   }));
   exp.querySelectorAll("#tsegP button").forEach(b => b.addEventListener("click", () => {
     exp.querySelectorAll("#tsegP button").forEach(x => x.classList.remove("on")); b.classList.add("on");
