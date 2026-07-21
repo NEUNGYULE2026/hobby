@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.43
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.44
+ *
+ * v3.44 변경
+ *  - 추세 기본 구분을 출고수량일 때 '영어'로(trendDefaultGroup) → 기본 선택 = 출고수량/영어/전체(채널)/월별. 우측 범례에서 'B&G=ELT-A·OUP=ELT-B' 줄 삭제.
  *
  * v3.43 변경
  *  - 출고수량 탭에 채널 축(전체/오프라인/온라인) 추가(구분과 기간 사이 #tsegC). TREND_QTY.series[그룹][채널] 중첩 구조, trendSeries가 채널 선택. 채널 분류=거래처코드×master(출판/ELT), 오프라인=총판·온라인=총판 외. 총매출 탭은 채널 토글 숨김.
@@ -1171,6 +1174,8 @@ function fmtNext(idx, it) {
  * ============================================================ */
 let trendChart = null;
 const trendState = { metric: "총매출", g: "전체", ch: "전체", p: "월별" };
+// 지표별 기본 구분 그룹 — 출고수량은 '영어', 그 외(총매출)는 '전체'
+function trendDefaultGroup(metric) { return metric === "출고수량" ? "영어" : "전체"; }
 
 // 추세 26년 최종월(현재 진행월) 총출고 동적 오버라이드.
 // 구글시트 매출현황의 행별 총출고를 그룹별로 매핑: { 전체, 영업1파트, 영업2파트, 저작권, 리플릿 }(억 단위).
@@ -1203,7 +1208,7 @@ function trendCfg() {
     return {
       data: TREND_QTY, groups: ["전체", "영어", "B&G", "OUP"], div: 10000, unit: "만", override: false,
       hasChannel: true, channels: (TREND_QTY.channels || ["전체", "오프라인", "온라인"]),
-      legend: '<span><b>영어</b> = 중고등+수험</span><span><b>B&amp;G</b> = ELT-A · <b>OUP</b> = ELT-B</span><span>오프라인=총판 · 온라인=총판 외</span>',
+      legend: '<span><b>영어</b> = 중고등+수험</span><span>오프라인=총판 · 온라인=총판 외</span>',
       titleBar: "월별 출고수량 (26 vs 25)", titleCum: "연누적 출고수량 (26 vs 25)",
     };
   }
@@ -1357,9 +1362,9 @@ function bindTrendExpander(scope) {
   const exp = scope.querySelector("#trend-exp");
   if (!exp) return;
   if (trendChart) { trendChart.destroy(); trendChart = null; }
-  // 매 렌더 시 기본값으로 초기화(헤더의 하드코딩 'on'과 일치). 기본 지표 = 출고수량(있으면).
+  // 매 렌더 시 기본값 초기화. 기본 = 출고수량 / 영어 / 전체(채널) / 월별.
   trendState.metric = (typeof TREND_QTY !== "undefined") ? "출고수량" : "총매출";
-  trendState.g = "전체"; trendState.ch = "전체"; trendState.p = "월별";
+  trendState.g = trendDefaultGroup(trendState.metric); trendState.ch = "전체"; trendState.p = "월별";
   let rendered = false;
   const head = exp.querySelector("#trend-head");
   const toggle = () => {
@@ -1371,7 +1376,7 @@ function bindTrendExpander(scope) {
   head.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
   exp.querySelectorAll("#tsegM button").forEach(b => b.addEventListener("click", () => {
     exp.querySelectorAll("#tsegM button").forEach(x => x.classList.remove("on")); b.classList.add("on");
-    trendState.metric = b.dataset.v; trendState.g = "전체"; trendState.ch = "전체"; renderTrendControls(exp); renderTrendChips(); renderTrendChart();
+    trendState.metric = b.dataset.v; trendState.g = trendDefaultGroup(b.dataset.v); trendState.ch = "전체"; renderTrendControls(exp); renderTrendChips(); renderTrendChart();
   }));
   exp.querySelectorAll("#tsegP button").forEach(b => b.addEventListener("click", () => {
     exp.querySelectorAll("#tsegP button").forEach(x => x.classList.remove("on")); b.classList.add("on");
