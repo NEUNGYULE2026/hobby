@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.48
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.49
+ *
+ * v3.49 변경
+ *  - 출고수량 캡션: 🔍 뒤 두 칸(&nbsp;&nbsp;) 띄우고 '· 영어'만 표기. basis에서 영어=중고등+수험·B&G·OUP 정의 제거(영어 라벨만 유지).
  *
  * v3.48 변경
  *  - 출고수량 캡션 정리: 연도 접두(26·25년) 제거, '출판(중고등) 공급율10 제외'→'유가(공급율10%) 제외'(🔍 replace 타깃도 갱신), 중복 '영어=중고등+수험' 제거.
@@ -1351,7 +1354,7 @@ function renderTrendControls(exp) {
     if (trendState.metric === "출고수량" && typeof QTY10_DETAIL !== "undefined") {
       // '공급율10 제외' 문구 뒤에 돋보기 → 제외 물량 월별(25 vs 26) 팝업
       cap.innerHTML = escape(base).replace("유가(공급율10%) 제외",
-        '유가(공급율10%) 제외 <button class="cap-detail-btn" type="button" id="qty10-btn" aria-label="유가 제외 상세 보기" title="유가(공급율10%) 제외 상세">🔍</button>');
+        '유가(공급율10%) 제외 <button class="cap-detail-btn" type="button" id="qty10-btn" aria-label="유가 제외 상세 보기" title="유가(공급율10%) 제외 상세">🔍</button>&nbsp;&nbsp;· 영어');
       const qb = cap.querySelector("#qty10-btn");
       if (qb) qb.addEventListener("click", openQty10Modal);
     } else {
