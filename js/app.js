@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.44
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.45
+ *
+ * v3.45 변경
+ *  - 추세 총매출/출고수량(#tsegM)·월별/연누적(#tsegP) 탭에 .tseg-nav 부여 → 활성색 진네이비(#123D69). 중간 구분·채널 토글은 기존 브랜드 블루로 구분(style.css v3.28).
  *
  * v3.44 변경
  *  - 추세 기본 구분을 출고수량일 때 '영어'로(trendDefaultGroup) → 기본 선택 = 출고수량/영어/전체(채널)/월별. 우측 범례에서 'B&G=ELT-A·OUP=ELT-B' 줄 삭제.
@@ -1269,10 +1272,10 @@ function buildTrendExpander() {
       </div>
       <div class="trend-body">
         <div class="trend-ctrl">
-          ${(typeof TREND_QTY !== "undefined") ? `<div class="tseg tseg-metric" id="tsegM"><button type="button" data-v="총매출">총매출</button><button type="button" data-v="출고수량" class="on">출고수량</button></div>` : ""}
+          ${(typeof TREND_QTY !== "undefined") ? `<div class="tseg tseg-metric tseg-nav" id="tsegM"><button type="button" data-v="총매출">총매출</button><button type="button" data-v="출고수량" class="on">출고수량</button></div>` : ""}
           <div class="tseg" id="tsegG"></div>
           <div class="tseg" id="tsegC"></div>
-          <div class="tseg" id="tsegP"><button type="button" data-v="월별" class="on">월별</button><button type="button" data-v="연누적">연누적</button></div>
+          <div class="tseg tseg-nav" id="tsegP"><button type="button" data-v="월별" class="on">월별</button><button type="button" data-v="연누적">연누적</button></div>
           <div class="trend-legend" id="trend-legend"></div>
         </div>
         <div class="trend-chips" id="trend-chips"></div>
