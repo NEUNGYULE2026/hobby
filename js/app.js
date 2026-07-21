@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.49
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.50
+ *
+ * v3.50 변경
+ *  - 출고수량·영어 드롭다운 라벨 '브랜드' → '주요브랜드'.
  *
  * v3.49 변경
  *  - 출고수량 캡션: 🔍 뒤 두 칸(&nbsp;&nbsp;) 띄우고 '· 영어'만 표기. basis에서 영어=중고등+수험·B&G·OUP 정의 제거(영어 라벨만 유지).
@@ -1335,7 +1338,7 @@ function renderTrendControls(exp) {
   if (lg) {
     if (cfg.hasChannel && trendState.g === "영어" && typeof TREND_QTY_BRAND !== "undefined") {
       const opts = ["선택", "전체"].concat(TREND_QTY_BRAND.brands || []);
-      lg.innerHTML = '<span class="trend-brand"><label for="trend-brand-sel">브랜드</label><select id="trend-brand-sel">'
+      lg.innerHTML = '<span class="trend-brand"><label for="trend-brand-sel">주요브랜드</label><select id="trend-brand-sel">'
         + opts.map(o => `<option value="${escape(o)}"${o === trendState.brand ? ' selected' : ''}>${escape(o)}</option>`).join("")
         + '</select></span>';
       const sel = lg.querySelector("#trend-brand-sel");
