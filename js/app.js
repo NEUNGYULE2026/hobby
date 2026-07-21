@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.47
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.48
+ *
+ * v3.48 변경
+ *  - 출고수량 캡션 정리: 연도 접두(26·25년) 제거, '출판(중고등) 공급율10 제외'→'유가(공급율10%) 제외'(🔍 replace 타깃도 갱신), 중복 '영어=중고등+수험' 제거.
  *
  * v3.47 변경
  *  - 출고수량 표시 단위 만(÷10000)→천(÷1000): trendCfg div 1000·unit '천'. 차트 축·값라벨·칩·캡션 모두 천 부.
@@ -1343,12 +1346,12 @@ function renderTrendControls(exp) {
   const cap = exp.querySelector("#trend-cap");
   if (cap) {
     const extra = cfg.override ? " · 26년 최종월은 구글시트 파트별 총출고, 25년 동월은 동기간(같은 일자) 컷"
-                : (cfg.hasChannel ? " · 영어=중고등+수험 · 오프라인=총판 · 온라인=총판 외" : "");
+                : (cfg.hasChannel ? " · 오프라인=총판 · 온라인=총판 외" : "");
     const base = String(cfg.data.cutNote || "") + " · 기준: " + String(cfg.data.basis || "") + extra;
     if (trendState.metric === "출고수량" && typeof QTY10_DETAIL !== "undefined") {
       // '공급율10 제외' 문구 뒤에 돋보기 → 제외 물량 월별(25 vs 26) 팝업
-      cap.innerHTML = escape(base).replace("공급율10 제외",
-        '공급율10 제외 <button class="cap-detail-btn" type="button" id="qty10-btn" aria-label="공급율10 제외 상세 보기" title="공급율10 제외 상세">🔍</button>');
+      cap.innerHTML = escape(base).replace("유가(공급율10%) 제외",
+        '유가(공급율10%) 제외 <button class="cap-detail-btn" type="button" id="qty10-btn" aria-label="유가 제외 상세 보기" title="유가(공급율10%) 제외 상세">🔍</button>');
       const qb = cap.querySelector("#qty10-btn");
       if (qb) qb.addEventListener("click", openQty10Modal);
     } else {
