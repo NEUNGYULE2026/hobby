@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.46
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.47
+ *
+ * v3.47 변경
+ *  - 출고수량 표시 단위 만(÷10000)→천(÷1000): trendCfg div 1000·unit '천'. 차트 축·값라벨·칩·캡션 모두 천 부.
  *
  * v3.46 변경
  *  - 출고수량·영어 전용 '브랜드' 드롭다운(우측, 선택/전체/주력품목 브랜드) 신설 → TREND_QTY_BRAND.series[브랜드][채널] 필터. '선택'=미필터(영어 전체), '전체'=주력품목 전 품목, 개별=브랜드(품목번호+구+파생 통합). 채널·기간 동일 적용. 영어일 때만 노출.
@@ -1213,7 +1216,7 @@ function buildTrendOverride(rows) {
 function trendCfg() {
   if (typeof TREND_QTY !== "undefined" && trendState.metric === "출고수량") {
     return {
-      data: TREND_QTY, groups: ["전체", "영어", "B&G", "OUP"], div: 10000, unit: "만", override: false,
+      data: TREND_QTY, groups: ["전체", "영어", "B&G", "OUP"], div: 1000, unit: "천", override: false,
       hasChannel: true, channels: (TREND_QTY.channels || ["전체", "오프라인", "온라인"]),
       legend: '<span><b>영어</b> = 중고등+수험</span><span>오프라인=총판 · 온라인=총판 외</span>',
       titleBar: "월별 출고수량 (26 vs 25)", titleCum: "연누적 출고수량 (26 vs 25)",
