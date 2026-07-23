@@ -2,7 +2,8 @@
  * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.53
  *
  * v3.53 변경
- *  - (공통)을 텍스트가 아닌 '표'로 렌더. buildCommonTable(forecastTotal.commonGrid) 신설 → (지사)/(총판) 텍스트 하단에 HTML 표(첫 행=헤더, 숫자/%/원 셀 우측정렬, 마지막 행 강조) 부착. openReasonModal(text, extraHTML) 2번째 인자로 표 HTML 전달, 텍스트는 .reason-text로 분리. (Code.gs v3.13·style.css v3.30 연동)
+ *  - (공통)을 텍스트가 아닌 '표'로 렌더. buildCommonTable(forecastTotal.commonGrid) 신설 → (지사)/(총판) 텍스트 하단에 HTML 표(첫 행=헤더, 열 단위 숫자 판정→숫자/%/원 열 우측정렬, 마지막 행 강조) 부착. openReasonModal(text, extraHTML) 2번째 인자로 표 HTML 전달, 텍스트는 .reason-text로 분리. (Code.gs v3.13·style.css v3.30 연동)
+ *  - [핫픽스] buildCommonTable(전역 함수)이 renderMonthlySales 지역 변수 nz를 참조해 'nz is not defined' 발생 → 함수 내부에 자체 nz 정의. (escape는 전역이라 무관)
  *
  * v3.52 변경
  *  - (증감)주요내역 팝업: forecastTotal 합계행 비고에 적힌 시트명의 내용을 (지사)/(총판) 하단에 (공통) 섹션으로 부착. 접두어 볼드 정규식에 공통 추가.
@@ -680,6 +681,7 @@ function renderMonthlySales(ms) {
 // (공통) 표 — 합계행 비고에 적힌 시트명의 시트 내용을 표로 렌더(첫 행=헤더, 숫자/%/원 셀 우측정렬)
 function buildCommonTable(grid) {
   if (!grid || !grid.length) return '';
+  const nz = s => String(s == null ? "" : s).trim();  // 전역 스코프용 로컬 헬퍼(renderMonthlySales의 nz는 지역 변수)
   const numRe = v => { const s = nz(v).replace(/[\s원]/g, ''); return s !== '' && /^-?[\d,]+(\.\d+)?%?$/.test(s); };
   const ncol = grid[0].length;
   // 열 단위 숫자 판정: 데이터행 중 비어있지 않은 셀의 과반이 숫자면 그 열은 숫자열(헤더·셀 모두 우측정렬)
