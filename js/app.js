@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.54
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.55
+ *
+ * v3.55 변경
+ *  - 총매출 추세 25년 진행월(7월*) 동기간 컷 자동화. Code.gs progressCut(누적실적 헤더 일자)로 trendSeries가 TREND_DATA.progressDaily25[그룹][day-1] 인덱싱해 y25 최종월 교체. 시트 날짜 바뀌면 자동 추종. 캡션에 '(N월 1~D일 동기간)' 표기. (기존: 25년 7월이 7/9 컷으로 고정돼 26년 7/22과 기간 불일치 → 수정)
  *
  * v3.54 변경
  *  - (공통) 표/텍스트 혼합 렌더. buildCommonTable → buildCommonContent: 빈 행으로 블록 분리 → 여러 칸 채워진 블록=표, 한 칸=텍스트로 자동 구분(블록별 빈 열 제거, 시트 순서 유지). 표만/텍스트만/혼합/null 모두 대응. (Code.gs v3.14·style.css v3.31 연동)
@@ -173,7 +176,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyqdV8QxGf98OIi-OwHATmffd0CXye398tgC0yhaK6QM0gQbRG-7iiNy16wtFdZFNEp/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbziUcfFDIQJ8TzOrDB6bGMmyZoVdGurRz_9OeBHixzwTFVTCSVjv3SF0WhJZamo2Azr/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -547,6 +550,8 @@ function renderMonthlySales(ms) {
   const rows = ms.rows || [];
   // 추세 26년 최종월 = 시트 파트별 총출고로 동적 교체 (effY26에서 사용)
   trendLastOverride = buildTrendOverride(rows);
+  // 추세 25년 진행월 = 시트 누적실적 헤더 일자까지 동기간 컷(trendSeries에서 progressDaily25 인덱싱)
+  trendProgressCut = ms.progressCut || null;
   if (!rows.length) { el.innerHTML = ""; return; }
   const fmt2 = v => (v === null || v === undefined) ? "-" : Number(v).toFixed(2);
   const fmtPct = v => (v === null || v === undefined) ? "-" : `${(Number(v) * 100).toFixed(1)}%`;
@@ -1264,6 +1269,8 @@ function trendDefaultGroup(metric) { return metric === "출고수량" ? "영어"
 // 구글시트 매출현황의 행별 총출고를 그룹별로 매핑: { 전체, 영업1파트, 영업2파트, 저작권, 리플릿 }(억 단위).
 // 저작권 = (마케팅전략팀) 저작권 행, 리플릿 = (제작팀) 리플릿(제작) 행. renderMonthlySales에서 설정. 없으면 trend-data.js 원본 그대로 사용.
 let trendLastOverride = null;
+// 진행월 컷 일자(구글시트 누적실적 헤더에서 파싱, Code.gs progressCut). 총매출 25년 동기간 컷 자동 추종용.
+let trendProgressCut = null;
 
 // 매출현황 rows(ms.rows)에서 그룹별 총출고(shipped) 추출 → 오버라이드 맵 생성.
 function buildTrendOverride(rows) {
@@ -1317,7 +1324,17 @@ function trendSeries(group, cfg) {
   if (cfg.override && trendLastOverride && trendLastOverride[group] != null && y26.length) {
     y26[y26.length - 1] = trendLastOverride[group];
   }
-  return { y26: y26, y25: (s.y25 || []) };
+  const y25 = (s.y25 || []).slice();
+  // 25년 진행월: 시트 누적실적 일자(progressCut.day)에 맞춰 일자별 누적에서 컷 (총매출만)
+  if (cfg.override && cfg.data.progressDaily25 && trendProgressCut && trendProgressCut.day && y25.length) {
+    const daily = cfg.data.progressDaily25[group];
+    const idx = (cfg.data.progressMonthIdx != null) ? cfg.data.progressMonthIdx : y25.length - 1;
+    if (daily && idx >= 0 && idx < y25.length) {
+      const v = daily[trendProgressCut.day - 1];
+      if (v != null) y25[idx] = v;
+    }
+  }
+  return { y26: y26, y25: y25 };
 }
 
 // 추세 차트 값 라벨 — 막대/라인 위에 실적 수치(억, 소수1자리) 표기. 데이터셋 색상과 동일.
@@ -1415,7 +1432,9 @@ function renderTrendControls(exp) {
   }
   const cap = exp.querySelector("#trend-cap");
   if (cap) {
-    const extra = cfg.override ? " · 26년 최종월은 구글시트 파트별 총출고, 25년 동월은 동기간(같은 일자) 컷"
+    const cutDay = (cfg.override && trendProgressCut && trendProgressCut.month && trendProgressCut.day)
+                 ? ` (${trendProgressCut.month}월 1~${trendProgressCut.day}일 동기간)` : "";
+    const extra = cfg.override ? " · 26년 최종월은 구글시트 파트별 총출고, 25년 동월은 동기간(같은 일자) 컷" + cutDay
                 : (cfg.hasChannel ? " · 오프라인=총판 · 온라인=총판 외" : "");
     const base = String(cfg.data.cutNote || "") + " · 기준: " + String(cfg.data.basis || "") + extra;
     if (trendState.metric === "출고수량" && typeof QTY10_DETAIL !== "undefined") {
