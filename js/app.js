@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.53
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.54
+ *
+ * v3.54 변경
+ *  - (공통) 표/텍스트 혼합 렌더. buildCommonTable → buildCommonContent: 빈 행으로 블록 분리 → 여러 칸 채워진 블록=표, 한 칸=텍스트로 자동 구분(블록별 빈 열 제거, 시트 순서 유지). 표만/텍스트만/혼합/null 모두 대응. (Code.gs v3.14·style.css v3.31 연동)
  *
  * v3.53 변경
  *  - (공통)을 텍스트가 아닌 '표'로 렌더. buildCommonTable(forecastTotal.commonGrid) 신설 → (지사)/(총판) 텍스트 하단에 HTML 표(첫 행=헤더, 열 단위 숫자 판정→숫자/%/원 열 우측정렬, 마지막 행 강조) 부착. openReasonModal(text, extraHTML) 2번째 인자로 표 HTML 전달, 텍스트는 .reason-text로 분리. (Code.gs v3.13·style.css v3.30 연동)
@@ -170,7 +173,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzHSQ5NGbhfz9OkqseK23HBsqVF8ENJxopZXUX7Kt38q9KtIXs_S_K8UNLBZhaIE9Fo/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyqdV8QxGf98OIi-OwHATmffd0CXye398tgC0yhaK6QM0gQbRG-7iiNy16wtFdZFNEp/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -567,7 +570,7 @@ function renderMonthlySales(ms) {
   if (nz(_ft0.part1Remark)) _fLines.push('(지사)\n' + nz(_ft0.part1Remark));
   if (nz(_ft0.part2Remark)) _fLines.push('(총판)\n' + nz(_ft0.part2Remark));
   const forecastReason = _fLines.join('\n\n'); // 지사·총판 사이에 빈 줄 1개 확보
-  const commonTableHTML = buildCommonTable(_ft0.commonGrid); // (공통) — 합계행 비고 시트명의 표를 그대로 렌더
+  const commonTableHTML = buildCommonContent(_ft0.commonGrid); // (공통) — 합계행 비고 시트명 내용을 표/텍스트 블록으로 렌더
   const showReason = rows.some(r => nz(r.remark)) || !!forecastReason || !!commonTableHTML;
   const REASON_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>`;
   function reasonCell(text, withCommon) {
@@ -678,24 +681,49 @@ function renderMonthlySales(ms) {
   bindTrendExpander(el);
 }
 
-// (공통) 표 — 합계행 비고에 적힌 시트명의 시트 내용을 표로 렌더(첫 행=헤더, 숫자/%/원 셀 우측정렬)
-function buildCommonTable(grid) {
+// (공통) — 합계행 비고에 적힌 시트명의 내용을 렌더. 빈 행으로 블록을 나눠 여러 칸=표, 한 칸=텍스트로 자동 구분(시트 순서 유지).
+function buildCommonContent(grid) {
   if (!grid || !grid.length) return '';
   const nz = s => String(s == null ? "" : s).trim();  // 전역 스코프용 로컬 헬퍼(renderMonthlySales의 nz는 지역 변수)
   const numRe = v => { const s = nz(v).replace(/[\s원]/g, ''); return s !== '' && /^-?[\d,]+(\.\d+)?%?$/.test(s); };
-  const ncol = grid[0].length;
-  // 열 단위 숫자 판정: 데이터행 중 비어있지 않은 셀의 과반이 숫자면 그 열은 숫자열(헤더·셀 모두 우측정렬)
-  const numCol = [];
-  for (let c = 0; c < ncol; c++) {
-    let filled = 0, nums = 0;
-    for (let r = 1; r < grid.length; r++) { const v = nz(grid[r][c]); if (v) { filled++; if (numRe(v)) nums++; } }
-    numCol[c] = filled > 0 && nums * 2 >= filled;
-  }
-  const cell = (v, c, tag) => `<${tag}${numCol[c] ? ' class="num"' : ''}>${escape(nz(v))}</${tag}>`;
-  const head = '<tr>' + grid[0].map((v, c) => cell(v, c, 'th')).join('') + '</tr>';
-  const bodyRows = grid.slice(1).map(r => '<tr>' + r.map((v, c) => cell(v, c, 'td')).join('') + '</tr>').join('');
-  return `<div class="reason-common"><div class="reason-common-title"><strong>(공통)</strong></div>`
-       + `<table class="reason-common-table"><thead>${head}</thead><tbody>${bodyRows}</tbody></table></div>`;
+  const filled = r => r.reduce((n, c) => n + (nz(c) !== '' ? 1 : 0), 0);
+
+  // 1) 빈 행 기준 블록 분리
+  const blocks = [];
+  let cur = [];
+  grid.forEach(r => { if (filled(r) === 0) { if (cur.length) { blocks.push(cur); cur = []; } } else cur.push(r); });
+  if (cur.length) blocks.push(cur);
+  if (!blocks.length) return '';
+
+  // 블록별 빈 열 제거
+  const trimCols = rows => {
+    const ncol = rows.reduce((m, r) => Math.max(m, r.length), 0);
+    const keep = [];
+    for (let c = 0; c < ncol; c++) if (rows.some(r => nz(r[c]) !== '')) keep.push(c);
+    return rows.map(r => keep.map(c => nz(r[c])));
+  };
+
+  const renderTable = rowsRaw => {
+    const rows = trimCols(rowsRaw);
+    const ncol = rows[0].length;
+    const numCol = [];
+    for (let c = 0; c < ncol; c++) {
+      let f = 0, n = 0;
+      for (let i = 1; i < rows.length; i++) { const v = nz(rows[i][c]); if (v) { f++; if (numRe(v)) n++; } }
+      numCol[c] = f > 0 ? n * 2 >= f : numRe(rows[0][c]);   // 데이터행 없으면 헤더값 기준
+    }
+    const cell = (v, c, tag) => `<${tag}${numCol[c] ? ' class="num"' : ''}>${escape(nz(v))}</${tag}>`;
+    const head = '<tr>' + rows[0].map((v, c) => cell(v, c, 'th')).join('') + '</tr>';
+    const body = rows.slice(1).map(r => '<tr>' + Array.from({ length: ncol }, (_, c) => cell(r[c], c, 'td')).join('') + '</tr>').join('');
+    return `<table class="reason-common-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  };
+  const renderText = rowsRaw => {
+    const lines = rowsRaw.map(r => r.map(c => nz(c)).filter(x => x !== '').join('  ')).filter(l => l !== '');
+    return `<div class="reason-common-text">${escape(lines.join('\n'))}</div>`;
+  };
+
+  const parts = blocks.map(b => (b.some(r => filled(r) >= 2) ? renderTable(b) : renderText(b)));
+  return `<div class="reason-common"><div class="reason-common-title"><strong>(공통)</strong></div>${parts.join('')}</div>`;
 }
 
 // 증감사유 레이어창 — 비고 내용을 표 본문과 동일한 폰트 크기로 표시. extraHTML(공통 표)은 텍스트 하단에 부착.
