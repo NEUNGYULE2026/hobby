@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.51
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.52
+ *
+ * v3.52 변경
+ *  - (증감)주요내역 팝업: forecastTotal.commonNote(합계행 비고에 적힌 시트명의 내용)가 있으면 (지사)/(총판) 하단에 (공통) 섹션으로 부착. 접두어 볼드 정규식에 공통 추가. (Code.gs v3.12 연동)
  *
  * v3.51 변경
  *  - 출고수량 만월 기준 폐기 → 진행월(7월*) 포함. trend-data.js 재집계(TREND_QTY·TREND_QTY_BRAND·QTY10, 26 최신일 7/22, 25년 7/1~22 동기간 컷). months 1~7월*로 확장(차트 자동 대응). 공급율10 팝업 주석 26년 범위 7/22로 갱신. (app.js 로직 변경은 팝업 주석뿐; 월 확장은 데이터 주도)
@@ -163,7 +166,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyerEh7AVOHLJ1L4TPeuL5USNrjbCB35QM2CcTnhAeGvaNLnlCTRZjSeHJnffWovFfS/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyBgdV4CjMaI7WVWXuOXrYZBUi15M3JAwyowEtBtjP4ZNbjlIUAZsWUHoTgXpmgbPLv/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -559,7 +562,8 @@ function renderMonthlySales(ms) {
   const _fLines = [];
   if (nz(_ft0.part1Remark)) _fLines.push('(지사)\n' + nz(_ft0.part1Remark));
   if (nz(_ft0.part2Remark)) _fLines.push('(총판)\n' + nz(_ft0.part2Remark));
-  const forecastReason = _fLines.join('\n\n'); // 영업1·2 둘 다 있으면 사이에 빈 줄 1개 확보
+  if (nz(_ft0.commonNote))  _fLines.push('(공통)\n' + nz(_ft0.commonNote)); // 합계행 비고에 적힌 시트명의 내용을 하단에 부착
+  const forecastReason = _fLines.join('\n\n'); // 지사·총판·공통 사이에 빈 줄 1개 확보
   const showReason = rows.some(r => nz(r.remark)) || !!forecastReason;
   const REASON_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>`;
   function reasonCell(text) {
@@ -691,7 +695,7 @@ function openReasonModal(text) {
   }
   // 본문은 HTML 이스케이프 후 (지사)/(총판) 접두어만 볼드 처리(개행은 .reason-modal-body의 white-space:pre-wrap가 렌더)
   modal.querySelector('.reason-modal-body').innerHTML =
-    escape(text || "").replace(/\((지사|총판)\)/g, '<strong>($1)</strong>');
+    escape(text || "").replace(/\((지사|총판|공통)\)/g, '<strong>($1)</strong>');
   modal.classList.add('open');
 }
 
