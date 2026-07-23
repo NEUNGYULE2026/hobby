@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.50
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.51
+ *
+ * v3.51 변경
+ *  - 출고수량 만월 기준 폐기 → 진행월(7월*) 포함. trend-data.js 재집계(TREND_QTY·TREND_QTY_BRAND·QTY10, 26 최신일 7/22, 25년 7/1~22 동기간 컷). months 1~7월*로 확장(차트 자동 대응). 공급율10 팝업 주석 26년 범위 7/22로 갱신. (app.js 로직 변경은 팝업 주석뿐; 월 확장은 데이터 주도)
  *
  * v3.50 변경
  *  - 출고수량·영어 드롭다운 라벨 '브랜드' → '주요브랜드'.
@@ -1383,7 +1386,7 @@ function openQty10Modal() {
       <tbody>${body}</tbody>
       <tfoot><tr><td>합계</td><td class="num">${nf(t25)}</td><td class="num">${nf(t26)}</td></tr></tfoot>
     </table>
-    <p class="q10-note">손익센터 출판사업(중고등) · 공급율 10 · 납품·매출수량&gt;0 (출고수량 집계에서 제외한 물량, 단위: 부). 26년은 6월까지.</p>`;
+    <p class="q10-note">손익센터 출판사업(중고등) · 유가(공급율10%) · 납품·매출수량&gt;0 (출고수량 집계에서 제외한 물량, 단위: 부). 26년 7월은 7/22까지.</p>`;
   let m = document.getElementById("qty10-modal");
   if (!m) {
     m = document.createElement("div"); m.id = "qty10-modal"; m.className = "reason-modal";
