@@ -19,6 +19,7 @@
  * v3.29 — 출고수량·영어 브랜드 드롭다운(.trend-brand), 우측 범례→하단 캡션 이동
  * v3.30 — 증감 팝업 (공통) 표 스타일(.reason-common·.reason-common-table), 텍스트는 .reason-text로 pre-wrap 분리
  * v3.31 — (공통) 표/텍스트 블록 혼합: .reason-common-text(텍스트 블록)·블록 간 간격
+ * v3.32 — (공통) 표 가독성: 표 제목 캡션(.reason-common-cap)·가로 스크롤(.reason-common-scroll)·모달 폭 확장(.has-common 880px)
  * v3.16 — KPI 카드 flex 세로 구조(같은 줄 높이 통일 + 하단 배지/버튼 정렬)
  * v3.17 — 텍스트형 KPI 달성율 컴팩트 인라인 미니바(.kpi-trate)
  * v3.18 — 달성율 미니바 여백 축소(실적 바로 아래로 올림)
@@ -1058,6 +1059,9 @@ a { color: inherit; text-decoration: none; }
 .reason-common-table td.num, .reason-common-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .reason-common-table tbody tr:last-child { font-weight: 700; background: #f7f9fc; }
 .reason-common-text { white-space: pre-wrap; word-break: keep-all; font-size: 13px; line-height: 1.6; color: var(--text-main); }
+.reason-common-cap { font-weight: 700; margin-bottom: 6px; }             /* 표 바로 위 제목(캡션) */
+.reason-common-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }  /* 표가 넓으면 깔끔히 가로 스크롤 */
+.reason-modal-box.has-common { width: min(880px, calc(100vw - 40px)); }         /* (공통) 표 있을 때 폭 확장(잘림 방지) */
 .reason-common > .reason-common-table + .reason-common-table,
 .reason-common > .reason-common-table + .reason-common-text,
 .reason-common > .reason-common-text + .reason-common-table,

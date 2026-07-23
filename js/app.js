@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.55
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.56
+ *
+ * v3.56 변경
+ *  - (공통) 표 가독성 개선. buildCommonContent를 행 타입(표/텍스트) 런 분할로 변경 → 제목(한 칸 행)과 표(여러 칸 행)가 빈 줄 없이 붙어 있어도 자동 분리(표 앞 텍스트는 캡션 .reason-common-cap로 강조). 표는 .reason-common-scroll로 감싸 가로 스크롤, (공통) 있을 때 모달 폭 확장(.has-common, 880px)으로 잘림 방지. (style.css v3.32)
  *
  * v3.55 변경
  *  - 총매출 추세 25년 진행월(7월*) 동기간 컷 자동화. Code.gs progressCut(누적실적 헤더 일자)로 trendSeries가 TREND_DATA.progressDaily25[그룹][day-1] 인덱싱해 y25 최종월 교체. 시트 날짜 바뀌면 자동 추종. 캡션에 '(N월 1~D일 동기간)' 표기. (기존: 25년 7월이 7/9 컷으로 고정돼 26년 7/22과 기간 불일치 → 수정)
@@ -693,12 +696,16 @@ function buildCommonContent(grid) {
   const numRe = v => { const s = nz(v).replace(/[\s원]/g, ''); return s !== '' && /^-?[\d,]+(\.\d+)?%?$/.test(s); };
   const filled = r => r.reduce((n, c) => n + (nz(c) !== '' ? 1 : 0), 0);
 
-  // 1) 빈 행 기준 블록 분리
-  const blocks = [];
-  let cur = [];
-  grid.forEach(r => { if (filled(r) === 0) { if (cur.length) { blocks.push(cur); cur = []; } } else cur.push(r); });
-  if (cur.length) blocks.push(cur);
-  if (!blocks.length) return '';
+  // 1) 행 타입(표=여러 칸 / 텍스트=한 칸) 런으로 분할. 빈 행은 경계. → 제목(한 칸)과 표(여러 칸)가 빈 줄 없이 붙어 있어도 자동 분리.
+  const segs = [];
+  let cur = null;
+  grid.forEach(r => {
+    if (filled(r) === 0) { cur = null; return; }
+    const t = filled(r) >= 2 ? 'table' : 'text';
+    if (!cur || cur.type !== t) { cur = { type: t, rows: [] }; segs.push(cur); }
+    cur.rows.push(r);
+  });
+  if (!segs.length) return '';
 
   // 블록별 빈 열 제거
   const trimCols = rows => {
@@ -720,14 +727,20 @@ function buildCommonContent(grid) {
     const cell = (v, c, tag) => `<${tag}${numCol[c] ? ' class="num"' : ''}>${escape(nz(v))}</${tag}>`;
     const head = '<tr>' + rows[0].map((v, c) => cell(v, c, 'th')).join('') + '</tr>';
     const body = rows.slice(1).map(r => '<tr>' + Array.from({ length: ncol }, (_, c) => cell(r[c], c, 'td')).join('') + '</tr>').join('');
-    return `<table class="reason-common-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+    return `<div class="reason-common-scroll"><table class="reason-common-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
   };
-  const renderText = rowsRaw => {
+  const renderText = (rowsRaw, isCaption) => {
     const lines = rowsRaw.map(r => r.map(c => nz(c)).filter(x => x !== '').join('  ')).filter(l => l !== '');
-    return `<div class="reason-common-text">${escape(lines.join('\n'))}</div>`;
+    if (!lines.length) return '';
+    return `<div class="reason-common-text${isCaption ? ' reason-common-cap' : ''}">${escape(lines.join('\n'))}</div>`;
   };
 
-  const parts = blocks.map(b => (b.some(r => filled(r) >= 2) ? renderTable(b) : renderText(b)));
+  // 표 바로 앞의 텍스트(한 칸) 런은 표 제목(캡션)으로 강조
+  const parts = segs.map((s, i) => {
+    if (s.type === 'table') return renderTable(s.rows);
+    const isCap = segs[i + 1] && segs[i + 1].type === 'table';
+    return renderText(s.rows, isCap);
+  });
   return `<div class="reason-common"><div class="reason-common-title"><strong>(공통)</strong></div>${parts.join('')}</div>`;
 }
 
@@ -758,6 +771,8 @@ function openReasonModal(text, extraHTML) {
   const boldText = escape(text || "").replace(/\((지사|총판|공통)\)/g, '<strong>($1)</strong>');
   modal.querySelector('.reason-modal-body').innerHTML =
     (boldText ? `<div class="reason-text">${boldText}</div>` : '') + (extraHTML || '');
+  // (공통) 표가 있으면 모달 폭 확장(표 잘림 방지)
+  modal.querySelector('.reason-modal-box').classList.toggle('has-common', !!extraHTML);
   modal.classList.add('open');
 }
 
