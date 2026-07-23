@@ -1,8 +1,11 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.52
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.53
+ *
+ * v3.53 변경
+ *  - (공통)을 텍스트가 아닌 '표'로 렌더. buildCommonTable(forecastTotal.commonGrid) 신설 → (지사)/(총판) 텍스트 하단에 HTML 표(첫 행=헤더, 숫자/%/원 셀 우측정렬, 마지막 행 강조) 부착. openReasonModal(text, extraHTML) 2번째 인자로 표 HTML 전달, 텍스트는 .reason-text로 분리. (Code.gs v3.13·style.css v3.30 연동)
  *
  * v3.52 변경
- *  - (증감)주요내역 팝업: forecastTotal.commonNote(합계행 비고에 적힌 시트명의 내용)가 있으면 (지사)/(총판) 하단에 (공통) 섹션으로 부착. 접두어 볼드 정규식에 공통 추가. (Code.gs v3.12 연동)
+ *  - (증감)주요내역 팝업: forecastTotal 합계행 비고에 적힌 시트명의 내용을 (지사)/(총판) 하단에 (공통) 섹션으로 부착. 접두어 볼드 정규식에 공통 추가.
  *
  * v3.51 변경
  *  - 출고수량 만월 기준 폐기 → 진행월(7월*) 포함. trend-data.js 재집계(TREND_QTY·TREND_QTY_BRAND·QTY10, 26 최신일 7/22, 25년 7/1~22 동기간 컷). months 1~7월*로 확장(차트 자동 대응). 공급율10 팝업 주석 26년 범위 7/22로 갱신. (app.js 로직 변경은 팝업 주석뿐; 월 확장은 데이터 주도)
@@ -166,7 +169,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzEVnUdIxkElci-oLknDz1Re-6FeX87JKyVTgd5p2tgQrRQ1lVcH_zUS5dynCcGRqy3/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzHSQ5NGbhfz9OkqseK23HBsqVF8ENJxopZXUX7Kt38q9KtIXs_S_K8UNLBZhaIE9Fo/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -562,15 +565,16 @@ function renderMonthlySales(ms) {
   const _fLines = [];
   if (nz(_ft0.part1Remark)) _fLines.push('(지사)\n' + nz(_ft0.part1Remark));
   if (nz(_ft0.part2Remark)) _fLines.push('(총판)\n' + nz(_ft0.part2Remark));
-  if (nz(_ft0.commonNote))  _fLines.push('(공통)\n' + nz(_ft0.commonNote)); // 합계행 비고에 적힌 시트명의 내용을 하단에 부착
-  const forecastReason = _fLines.join('\n\n'); // 지사·총판·공통 사이에 빈 줄 1개 확보
-  const showReason = rows.some(r => nz(r.remark)) || !!forecastReason;
+  const forecastReason = _fLines.join('\n\n'); // 지사·총판 사이에 빈 줄 1개 확보
+  const commonTableHTML = buildCommonTable(_ft0.commonGrid); // (공통) — 합계행 비고 시트명의 표를 그대로 렌더
+  const showReason = rows.some(r => nz(r.remark)) || !!forecastReason || !!commonTableHTML;
   const REASON_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>`;
-  function reasonCell(text) {
+  function reasonCell(text, withCommon) {
     if (!showReason) return "";
     const t = nz(text);
-    if (!t) return `<td class="reason-cell"></td>`;
-    return `<td class="reason-cell"><button class="reason-btn" type="button" data-reason="${escape(t)}" aria-label="증감사유 보기" title="증감사유">${REASON_ICON}</button></td>`;
+    const common = withCommon && commonTableHTML;
+    if (!t && !common) return `<td class="reason-cell"></td>`;
+    return `<td class="reason-cell"><button class="reason-btn" type="button" data-reason="${escape(t)}"${common ? ' data-common="1"' : ''} aria-label="증감사유 보기" title="증감사유">${REASON_ICON}</button></td>`;
   }
 
   const h = ms.headers || {};
@@ -587,7 +591,7 @@ function renderMonthlySales(ms) {
     let body = rows.map(r => `<tr class="${r.type}">${rowCells(r, r.type === 'normal' ? pctCls(r.progress) : '')}${reasonCell(r.remark)}</tr>`).join("");
     if (ms.forecastTotal) {
       const ft = ms.forecastTotal;
-      body += `<tr class="forecast-total">${rowCells({ label: ft.label || "월마감 예상매출 합계", targetShipped: ft.targetShipped, targetReturns: ft.targetReturns, targetNet: ft.targetNet, shipped: ft.shipped, returns: ft.returns, net: ft.net, progress: ft.progress }, '')}${reasonCell(forecastReason)}</tr>`;
+      body += `<tr class="forecast-total">${rowCells({ label: ft.label || "월마감 예상매출 합계", targetShipped: ft.targetShipped, targetReturns: ft.targetReturns, targetNet: ft.targetNet, shipped: ft.shipped, returns: ft.returns, net: ft.net, progress: ft.progress }, '')}${reasonCell(forecastReason, true)}</tr>`;
     }
     const cg = showReason
       ? `<col style="width:20%"/><col style="width:10%"/><col style="width:9%"/><col style="width:11%"/><col style="width:10%"/><col style="width:9%"/><col style="width:11%"/><col style="width:11%"/><col style="width:9%"/>`
@@ -634,7 +638,7 @@ function renderMonthlySales(ms) {
           <td class="num">${fmt2(ft.returns)}</td>
           <td class="num">${fmt2(ft.net)}</td>
           ${pctCell(ft.progress, '')}
-          ${reasonCell(forecastReason)}
+          ${reasonCell(forecastReason, true)}
         </tr>`;
     }
     const cg = showReason
@@ -665,13 +669,35 @@ function renderMonthlySales(ms) {
   `;
 
   el.querySelectorAll('.reason-btn').forEach(btn => {
-    btn.addEventListener('click', () => openReasonModal(btn.getAttribute('data-reason')));
+    btn.addEventListener('click', () => openReasonModal(
+      btn.getAttribute('data-reason'),
+      btn.hasAttribute('data-common') ? commonTableHTML : ''
+    ));
   });
   bindTrendExpander(el);
 }
 
-// 증감사유 레이어창 — 비고 내용을 표 본문과 동일한 폰트 크기로 표시
-function openReasonModal(text) {
+// (공통) 표 — 합계행 비고에 적힌 시트명의 시트 내용을 표로 렌더(첫 행=헤더, 숫자/%/원 셀 우측정렬)
+function buildCommonTable(grid) {
+  if (!grid || !grid.length) return '';
+  const numRe = v => { const s = nz(v).replace(/[\s원]/g, ''); return s !== '' && /^-?[\d,]+(\.\d+)?%?$/.test(s); };
+  const ncol = grid[0].length;
+  // 열 단위 숫자 판정: 데이터행 중 비어있지 않은 셀의 과반이 숫자면 그 열은 숫자열(헤더·셀 모두 우측정렬)
+  const numCol = [];
+  for (let c = 0; c < ncol; c++) {
+    let filled = 0, nums = 0;
+    for (let r = 1; r < grid.length; r++) { const v = nz(grid[r][c]); if (v) { filled++; if (numRe(v)) nums++; } }
+    numCol[c] = filled > 0 && nums * 2 >= filled;
+  }
+  const cell = (v, c, tag) => `<${tag}${numCol[c] ? ' class="num"' : ''}>${escape(nz(v))}</${tag}>`;
+  const head = '<tr>' + grid[0].map((v, c) => cell(v, c, 'th')).join('') + '</tr>';
+  const bodyRows = grid.slice(1).map(r => '<tr>' + r.map((v, c) => cell(v, c, 'td')).join('') + '</tr>').join('');
+  return `<div class="reason-common"><div class="reason-common-title"><strong>(공통)</strong></div>`
+       + `<table class="reason-common-table"><thead>${head}</thead><tbody>${bodyRows}</tbody></table></div>`;
+}
+
+// 증감사유 레이어창 — 비고 내용을 표 본문과 동일한 폰트 크기로 표시. extraHTML(공통 표)은 텍스트 하단에 부착.
+function openReasonModal(text, extraHTML) {
   let modal = document.getElementById('reason-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -693,9 +719,10 @@ function openReasonModal(text) {
     modal.querySelector('.reason-modal-close').addEventListener('click', close);
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   }
-  // 본문은 HTML 이스케이프 후 (지사)/(총판) 접두어만 볼드 처리(개행은 .reason-modal-body의 white-space:pre-wrap가 렌더)
+  // 텍스트: HTML 이스케이프 후 (지사)/(총판)/(공통) 접두어만 볼드(개행은 white-space:pre-wrap가 렌더). extraHTML(공통 표)은 그 아래에.
+  const boldText = escape(text || "").replace(/\((지사|총판|공통)\)/g, '<strong>($1)</strong>');
   modal.querySelector('.reason-modal-body').innerHTML =
-    escape(text || "").replace(/\((지사|총판|공통)\)/g, '<strong>($1)</strong>');
+    (boldText ? `<div class="reason-text">${boldText}</div>` : '') + (extraHTML || '');
   modal.classList.add('open');
 }
 
