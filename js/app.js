@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.56
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.57
+ *
+ * v3.57 변경
+ *  - (데이터) 26년 rawdata 7/29 반영. trend-data.js 출고수량(TREND_QTY·TREND_QTY_BRAND) 7월* 진행월 컷 7/22→7/29 재집계(쿠팡 7/29 트림 병합). 완결월 1~6월·QTY10·총매출 불변. 공급율10 팝업 주석 7/22→7/29. (총매출 25년은 progressDaily25로 자동 추종이라 데이터 변경 없음)
  *
  * v3.56 변경
  *  - (공통) 표 가독성 개선. buildCommonContent를 행 타입(표/텍스트) 런 분할로 변경 → 제목(한 칸 행)과 표(여러 칸 행)가 빈 줄 없이 붙어 있어도 자동 분리(표 앞 텍스트는 캡션 .reason-common-cap로 강조). 표는 .reason-common-scroll로 감싸 가로 스크롤, (공통) 있을 때 모달 폭 확장(.has-common, 880px)으로 잘림 방지. (style.css v3.32)
@@ -1481,7 +1484,7 @@ function openQty10Modal() {
       <tbody>${body}</tbody>
       <tfoot><tr><td>합계</td><td class="num">${nf(t25)}</td><td class="num">${nf(t26)}</td></tr></tfoot>
     </table>
-    <p class="q10-note">손익센터 출판사업(중고등) · 유가(공급율10%) · 납품·매출수량&gt;0 (출고수량 집계에서 제외한 물량, 단위: 부). 26년 7월은 7/22까지.</p>`;
+    <p class="q10-note">손익센터 출판사업(중고등) · 유가(공급율10%) · 납품·매출수량&gt;0 (출고수량 집계에서 제외한 물량, 단위: 부). 26년 7월은 7/29까지.</p>`;
   let m = document.getElementById("qty10-modal");
   if (!m) {
     m = document.createElement("div"); m.id = "qty10-modal"; m.className = "reason-modal";
