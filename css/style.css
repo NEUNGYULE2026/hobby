@@ -20,6 +20,7 @@
  * v3.30 — 증감 팝업 (공통) 표 스타일(.reason-common·.reason-common-table), 텍스트는 .reason-text로 pre-wrap 분리
  * v3.31 — (공통) 표/텍스트 블록 혼합: .reason-common-text(텍스트 블록)·블록 간 간격
  * v3.32 — (공통) 표 가독성: 표 제목 캡션(.reason-common-cap)·가로 스크롤(.reason-common-scroll)·모달 폭 확장(.has-common 880px)
+ * v3.33 — (출원사별) 점유율 버튼(.gg-pub-btn)+매트릭스 레이어(.gg-pub-box·.gg-pub-table, NE능률 강조·가로 스크롤)
  * v3.16 — KPI 카드 flex 세로 구조(같은 줄 높이 통일 + 하단 배지/버튼 정렬)
  * v3.17 — 텍스트형 KPI 달성율 컴팩트 인라인 미니바(.kpi-trate)
  * v3.18 — 달성율 미니바 여백 축소(실적 바로 아래로 올림)
@@ -1304,4 +1305,19 @@ a { color: inherit; text-decoration: none; }
 .gg-table th,.gg-table td{text-align:center;}
 .gg-table th:first-child,.gg-table td:first-child{text-align:left;color:var(--text-strong);}
 .gg-table tr.gg-tot td:last-child{color:var(--brand);}
+/* (출원사별) 점유율 — 근거 팝업 버튼 + 전용 매트릭스 레이어 */
+.gg-pub-btn{margin-left:auto;border:1px solid var(--brand);background:#fff;color:var(--brand-deep);font-size:11.5px;font-weight:700;padding:3px 11px;border-radius:13px;cursor:pointer;line-height:1.5;white-space:nowrap;}
+.gg-pub-btn:hover{background:var(--brand);color:#fff;}
+.reason-modal-box.gg-pub-box{width:min(940px,calc(100vw - 32px));}
+.gg-pub-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.gg-pub-table{min-width:760px;}
+.gg-pub-table th,.gg-pub-table td{border-right:1px solid var(--border);white-space:nowrap;}
+.gg-pub-table th.gg-pub-grp{text-align:center;border-bottom:1px solid var(--border-strong);}
+.gg-pub-table td.muted{color:#B7C0CC;}
+.gg-pub-table .ne{background:#EAF7FC;}
+.gg-pub-table th.ne{background:#D5EEF9;}
+.gg-pub-table tr.gg-tot td.ne{background:#CDE9F6;}
+.gg-pub-unit{font-weight:400;font-size:10px;color:var(--text-soft);}
+.gg-pub-cap{font-weight:400;font-size:11px;color:var(--text-soft);}
+.gg-pub-note{margin:11px 2px 0;font-size:11.5px;color:var(--text-soft);line-height:1.5;}
 @media(max-width:600px){.gg-flow{flex-direction:column;}.gg-op{flex-direction:row;min-width:0;}.gg-op .arr{transform:rotate(90deg);}}

@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.57
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.58
+ *
+ * v3.58 변경
+ *  - (고3영어) 근거 팝업(openGonggyoDetail)에 '[출원사별 점유율]' 버튼(.gg-pub-btn, 산정근거 헤더 우측) 추가 → openGonggyoByPub 레이어. 26학년도 고2 선택과목 × 출원사(NE능률·시사·천재·미래엔·비상·동아) 부수/점유율 매트릭스 표(NE능률 강조, 부수0='-', 합계행). 데이터 gonggyo-data.js GONGGYO_BYPUB(원본 rawdata/(출원사별)점유율.xlsx). style.css v3.33.
  *
  * v3.57 변경
  *  - (데이터) 26년 rawdata 7/29 반영. trend-data.js 출고수량(TREND_QTY·TREND_QTY_BRAND) 7월* 진행월 컷 7/22→7/29 재집계(쿠팡 7/29 트림 병합). 완결월 1~6월·QTY10·총매출 불변. 공급율10 팝업 주석 7/22→7/29. (총매출 25년은 progressDaily25로 자동 추종이라 데이터 변경 없음)
@@ -1616,7 +1619,7 @@ function openGonggyoDetail() {
       </div>
       <p class="gg-msg"><b>동일 선택과목</b> 기반 직전 학년(26학년도 고2)의 실제 점유율(${pct(baseShare)})을 <b>27학년도 3학년 선택과목 점유율 목표</b>로 수립.</p>
     </div>
-    <div class="gg-sec-h">산정 근거 &mdash; 26학년도 고2 선택과목 실적</div>
+    <div class="gg-sec-h">산정 근거 &mdash; 26학년도 고2 선택과목 실적<button class="gg-pub-btn" type="button">[출원사별 점유율]</button></div>
     <table class="gg-table">
       <thead><tr><th>선택과목</th><th>출원사(전체)</th><th>NE능률</th><th>점유율</th></tr></thead>
       <tbody>
@@ -1624,5 +1627,57 @@ function openGonggyoDetail() {
         <tr class="gg-tot"><td>합계</td><td>${num(baseAll)}</td><td>${num(baseNe)}</td><td>${pct(baseShare)}</td></tr>
       </tbody>
     </table>`;
+  const _pb = m.querySelector(".gg-pub-btn");
+  if (_pb) _pb.addEventListener("click", openGonggyoByPub);
+  m.classList.add("open");
+}
+
+/* (출원사별) 26학년도 고2 선택과목 점유율 — 위 근거 팝업의 '[출원사별 점유율]' 버튼용 레이어. 데이터=gonggyo-data.js GONGGYO_BYPUB */
+function openGonggyoByPub() {
+  if (typeof GONGGYO_BYPUB === "undefined") return;
+  const g = GONGGYO_BYPUB;
+  const num = n => Number(n).toLocaleString("ko-KR");
+  const pctv = v => (v * 100).toFixed(1) + "%";
+  const P = g.publishers, NE = 0;   // NE능률 = 첫 열(강조)
+  let m = document.getElementById("gonggyo-bypub-modal");
+  if (!m) {
+    m = document.createElement("div");
+    m.id = "gonggyo-bypub-modal";
+    m.className = "reason-modal";
+    m.innerHTML = `
+      <div class="reason-modal-backdrop"></div>
+      <div class="reason-modal-box gg-box gg-pub-box" role="dialog" aria-modal="true" aria-label="출원사별 점유율">
+        <div class="reason-modal-head"><span class="reason-modal-title"></span>
+          <button class="reason-modal-close" type="button" aria-label="닫기">&times;</button></div>
+        <div class="gg-body gg-pub-body"></div>
+      </div>`;
+    document.body.appendChild(m);
+    const close = () => m.classList.remove("open");
+    m.querySelector(".reason-modal-backdrop").addEventListener("click", close);
+    m.querySelector(".reason-modal-close").addEventListener("click", close);
+    document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+  }
+  m.querySelector(".reason-modal-title").textContent = g.title;
+  const grpHead = P.map((p, i) => `<th colspan="2" class="gg-pub-grp${i === NE ? " ne" : ""}">${escape(p)}</th>`).join("");
+  const subHead = P.map((_, i) => `<th class="${i === NE ? "ne" : ""}">부수</th><th class="${i === NE ? "ne" : ""}">점유율</th>`).join("");
+  const cellsOf = cells => cells.map((c, i) => {
+    const ne = i === NE ? " ne" : "";
+    return c[0] ? `<td class="${ne}">${num(c[0])}</td><td class="${ne}">${pctv(c[1])}</td>`
+                : `<td class="muted${ne}">-</td><td class="muted${ne}">-</td>`;
+  }).join("");
+  const body = g.subjects.map(s => `<tr><td>${escape(s.name)}</td>${cellsOf(s.cells)}<td>${num(s.total)}</td></tr>`).join("");
+  const totRow = `<tr class="gg-tot"><td>${escape(g.total.name)}</td>${cellsOf(g.total.cells)}<td>${num(g.total.total)}</td></tr>`;
+  m.querySelector(".gg-pub-body").innerHTML = `
+    <div class="gg-sec-h">${escape(g.title)} <span class="gg-pub-cap">· 부수 / 점유율(=출원사 부수 ÷ 과목 합계) · NE능률 강조</span></div>
+    <div class="gg-pub-scroll">
+      <table class="gg-table gg-pub-table">
+        <thead>
+          <tr><th rowspan="2">(고3) 선택과목</th>${grpHead}<th rowspan="2">합계<br><span class="gg-pub-unit">(부수)</span></th></tr>
+          <tr>${subHead}</tr>
+        </thead>
+        <tbody>${body}${totRow}</tbody>
+      </table>
+    </div>
+    <p class="gg-pub-note">${escape(g.note)}</p>`;
   m.classList.add("open");
 }
