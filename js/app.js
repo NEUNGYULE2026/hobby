@@ -1668,7 +1668,7 @@ function openGonggyoByPub() {
   const body = g.subjects.map(s => `<tr><td>${escape(s.name)}</td>${cellsOf(s.cells)}<td>${num(s.total)}</td></tr>`).join("");
   const totRow = `<tr class="gg-tot"><td>${escape(g.total.name)}</td>${cellsOf(g.total.cells)}<td>${num(g.total.total)}</td></tr>`;
   m.querySelector(".gg-pub-body").innerHTML = `
-    <div class="gg-sec-h">${escape(g.title)} <span class="gg-pub-cap">· 부수 / 점유율(=출원사 부수 ÷ 과목 합계) · NE능률 강조</span></div>
+    <div class="gg-sec-h">${escape(g.title)} <span class="gg-pub-cap">· 부수 / 점유율(=출원사 부수 ÷ 과목 합계)</span></div>
     <div class="gg-pub-scroll">
       <table class="gg-table gg-pub-table">
         <thead>

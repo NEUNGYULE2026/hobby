@@ -1313,6 +1313,7 @@ a { color: inherit; text-decoration: none; }
 .gg-pub-table{min-width:760px;}
 .gg-pub-table th,.gg-pub-table td{border-right:1px solid var(--border);white-space:nowrap;}
 .gg-pub-table th.gg-pub-grp{text-align:center;border-bottom:1px solid var(--border-strong);}
+.gg-pub-table thead tr:nth-child(2) th{font-weight:400;}  /* 부수/점유율 서브헤더 볼드 해제 */
 .gg-pub-table td.muted{color:#B7C0CC;}
 .gg-pub-table .ne{background:#EAF7FC;}
 .gg-pub-table th.ne{background:#D5EEF9;}
