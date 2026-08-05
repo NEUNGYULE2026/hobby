@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.58
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.59
+ *
+ * v3.59 변경
+ *  - 부서별 주간 보고 '동적 팀' 렌더(조직 구조 변경 대응). Code.gs teams 배열(팀명별, '팀명-파트명'→파트)을 팔레트 순환 cls로 카드화(renderTeamsDynamic→renderHardcodedTeam 재사용, 파트 있으면 소제목 구분·없으면 solo). 상단 탭도 팀명 기반 동적 생성(renderTeamTabs: 개요·CEO와 의사결정 사이 삽입). index.html 하드코딩 팀 탭 제거. 구 TEAM_SECTIONS/buildTeamSections/resolveDeptTeam·주차게이팅 경로 미사용(정의는 잔존).
  *
  * v3.58 변경
  *  - (고3영어) 근거 팝업(openGonggyoDetail)에 '[출원사별 점유율]' 버튼(.gg-pub-btn, 산정근거 헤더 우측) 추가 → openGonggyoByPub 레이어. 26학년도 고2 선택과목 × 출원사(NE능률·시사·천재·미래엔·비상·동아) 부수/점유율 매트릭스 표(NE능률 강조, 부수0='-', 합계행). 데이터 gonggyo-data.js GONGGYO_BYPUB(원본 rawdata/(출원사별)점유율.xlsx). style.css v3.33.
@@ -185,7 +188,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbziUcfFDIQJ8TzOrDB6bGMmyZoVdGurRz_9OeBHixzwTFVTCSVjv3SF0WhJZamo2Azr/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbybKfahlxgvP9keovkmGpo8e3Vl8l_TawwhyCdqfGt_Dr0WLomNlqpXEzAjClf084hC/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -292,22 +295,22 @@ function render(d) {
   const kpis        = d.kpis || [];
   const sales       = d.monthlySales || { title:"", rows: [], note: "", forecastTotal: null };
   const ceo         = d.ceo || [];
-  const teams       = d.teams || {};
   const decisions   = d.decisions || [];
-  // 마케팅전략팀·제작팀: M7-W3~ 시트 연동(d.mktTeam/d.productionTeam), M7-W2 하드코딩, 그 전 미노출
-  const wk = weekSortKey(d.week);
-  const mktTeamObj  = resolveDeptTeam("mktstrategy", "마케팅전략팀", d.mktTeam, (typeof MKT_TEAM !== "undefined" ? MKT_TEAM : null), wk);
-  const prodTeamObj = resolveDeptTeam("production", "제작팀", d.productionTeam, (typeof PRODUCTION_TEAM !== "undefined" ? PRODUCTION_TEAM : null), wk);
-  const extraTeams  = [mktTeamObj, prodTeamObj].filter(Boolean);
+  // 부서별 주간 보고 — 팀 열 값 기반 동적 팀(Code.gs parseDeptTeamsDynamic). 팀명별 카드, '팀명-파트명'이면 팀 안에서 파트 구분.
+  const TEAM_PALETTE = ["t-sales","t-digital","t-test","t-netimes","t-regional"];
+  const teamCards = (Array.isArray(d.teams) ? d.teams : []).map((t, i) => ({
+    id: "team-" + i,
+    name: t.name,
+    cls: TEAM_PALETTE[i % TEAM_PALETTE.length],
+    parts: t.parts || [],
+    items: t.items || [],
+  }));
 
   const hasMessages = messages.length > 0;
   const hasKpis     = kpis.length > 0;
   const hasSales    = (sales.rows || []).length > 0;
   const hasCeo      = ceo.length > 0;
-  const teamSections = buildTeamSections(teams);
-  const teamPresent = {};
-  teamSections.forEach(sec => { teamPresent[sec.id] = true; });
-  const hasTeams = teamSections.length > 0 || extraTeams.length > 0;
+  const hasTeams = teamCards.length > 0;
   const hasDecisions = decisions.length > 0;
 
   const parts = [];
@@ -363,7 +366,7 @@ function render(d) {
   if (hasKpis)      renderKpis(kpis);
   if (hasSales)     renderMonthlySales(sales);
   if (hasCeo)       renderCeo(ceo);
-  if (hasTeams)     renderTeams(teamSections, extraTeams);
+  if (hasTeams)     renderTeamsDynamic(teamCards);
   if (hasDecisions) renderDecisions(decisions);
 
   const dlBtn = document.getElementById("download-form-btn");
@@ -376,15 +379,10 @@ function render(d) {
     });
   }
 
-  setupNavScroll({
-    overview: hasMessages,
-    ceo: hasCeo,
-    "sales-part1": !!teamPresent["sales-part1"],   // 탭: 수도권세일즈팀
-    "mktstrategy": !!mktTeamObj,   // 탭: 마케팅전략팀(M7-W2 하드코딩 / M7-W3~ 시트)
-    "production": !!prodTeamObj,   // 탭: 제작팀(M7-W2 하드코딩 / M7-W3~ 시트)
-    regional: !!teamPresent.regional,
-    "decisions-anchor": hasDecisions,
-  });
+  renderTeamTabs(teamCards);   // 팀 탭 동적 생성(개요·CEO와 의사결정 사이)
+  const navVis = { overview: hasMessages, ceo: hasCeo, "decisions-anchor": hasDecisions };
+  teamCards.forEach(tc => { navVis[tc.id] = true; });
+  setupNavScroll(navVis);
 }
 
 function renderMessages(messages) {
@@ -901,6 +899,33 @@ function renderHardcodedTeam(tm) {
         <header class="team-header ${cls}"><h2>${escape(tm.name)}</h2></header>
         <div class="team-body ${cls}">${body}</div>
       </section>`;
+}
+
+// 동적 팀 렌더 — Code.gs teams 배열(팀명별). 각 팀은 renderHardcodedTeam으로 카드화(파트 있으면 소제목 구분).
+function renderTeamsDynamic(teamCards) {
+  const el = document.getElementById("teams");
+  if (!el) return;
+  el.innerHTML = (teamCards || []).map(renderHardcodedTeam).join("");
+  el.querySelectorAll(".basis-i").forEach(b => {
+    const open = () => openProgressBasis(b.dataset.task, b.dataset.pct, b.dataset.basis);
+    b.addEventListener("click", open);
+    b.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+  });
+}
+
+// 팀 탭 동적 생성 — .tabs-inner의 '의사결정 요청' 링크 앞에 팀명 탭 삽입(기존 동적 탭은 제거 후 재생성).
+function renderTeamTabs(teamCards) {
+  const inner = document.querySelector(".tabs-inner");
+  if (!inner) return;
+  inner.querySelectorAll("a.team-tab").forEach(a => a.remove());
+  const decis = inner.querySelector('a[href="#decisions-anchor"]');
+  (teamCards || []).forEach(tc => {
+    const a = document.createElement("a");
+    a.href = "#" + tc.id;
+    a.className = "team-tab";
+    a.textContent = tc.name;
+    inner.insertBefore(a, decis || null);
+  });
 }
 
 // 진척율 판단근거 레이어창 (타이틀 고정 + 본문 세로 스크롤)
