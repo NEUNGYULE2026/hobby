@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.59
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.60
+ *
+ * v3.60 변경
+ *  - 초기 로딩 시 불완전한 탭 바(팀 탭 주입 전 개요/CEO/의사결정만) 플래시 제거. `.tabs-row`를 CSS로 기본 숨김(visibility:hidden, 공간 유지) → 렌더/에러 완료 시 `revealTabs()`가 `.ready` 부여해 완성된 탭 바만 노출. (style.css v3.34)
  *
  * v3.59 변경
  *  - 부서별 주간 보고 '동적 팀' 렌더(조직 구조 변경 대응). Code.gs teams 배열(팀명별, '팀명-파트명'→파트)을 팔레트 순환 cls로 카드화(renderTeamsDynamic→renderHardcodedTeam 재사용, 파트 있으면 소제목 구분·없으면 solo). 상단 탭도 팀명 기반 동적 생성(renderTeamTabs: 개요·CEO와 의사결정 사이 삽입). index.html 하드코딩 팀 탭 제거. 구 TEAM_SECTIONS/buildTeamSections/resolveDeptTeam·주차게이팅 경로 미사용(정의는 잔존).
@@ -216,6 +219,7 @@ async function loadData(weekKey) {
   root.innerHTML = '<div class="loading">대시보드 데이터를 불러오는 중입니다…</div>';
   if (!API_URL || API_URL.indexOf("Apps-Script") !== -1) {
     root.innerHTML = '<div class="error">API_URL이 설정되지 않았습니다. app.js 의 API_URL 에 Apps Script 웹앱 URL을 입력하세요.</div>';
+    revealTabs();
     return;
   }
   try {
@@ -228,6 +232,7 @@ async function loadData(weekKey) {
     render(data);
   } catch (err) {
     root.innerHTML = `<div class="error">데이터를 불러오지 못했습니다: ${err.message}</div>`;
+    revealTabs();
     console.error(err);
   }
 }
@@ -383,6 +388,13 @@ function render(d) {
   const navVis = { overview: hasMessages, ceo: hasCeo, "decisions-anchor": hasDecisions };
   teamCards.forEach(tc => { navVis[tc.id] = true; });
   setupNavScroll(navVis);
+  revealTabs();   // 렌더 완료 → 완성된 탭 바 노출(플래시 방지)
+}
+
+// 탭 바 노출(데이터 로드/렌더 완료 후). 로딩 중에는 CSS(.tabs-row visibility:hidden)로 감춤.
+function revealTabs() {
+  const tr = document.querySelector(".tabs-row");
+  if (tr) tr.classList.add("ready");
 }
 
 function renderMessages(messages) {

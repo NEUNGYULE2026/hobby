@@ -21,6 +21,7 @@
  * v3.31 — (공통) 표/텍스트 블록 혼합: .reason-common-text(텍스트 블록)·블록 간 간격
  * v3.32 — (공통) 표 가독성: 표 제목 캡션(.reason-common-cap)·가로 스크롤(.reason-common-scroll)·모달 폭 확장(.has-common 880px)
  * v3.33 — (출원사별) 점유율 버튼(.gg-pub-btn)+매트릭스 레이어(.gg-pub-box·.gg-pub-table, NE능률 강조·가로 스크롤)
+ * v3.34 — 로딩 중 탭 바 숨김(.tabs-row visibility:hidden → .ready 노출)로 초기 불완전 탭 플래시 제거
  * v3.16 — KPI 카드 flex 세로 구조(같은 줄 높이 통일 + 하단 배지/버튼 정렬)
  * v3.17 — 텍스트형 KPI 달성율 컴팩트 인라인 미니바(.kpi-trate)
  * v3.18 — 달성율 미니바 여백 축소(실적 바로 아래로 올림)
@@ -175,7 +176,9 @@ a { color: inherit; text-decoration: none; }
 .tabs-row {
   background: #fff;
   border-bottom: 1px solid var(--border);
+  visibility: hidden;   /* 데이터 로드 전 불완전한 탭 플래시 방지 — 렌더 완료 시 .ready로 노출 */
 }
+.tabs-row.ready { visibility: visible; }
 .tabs-inner {
   max-width: 1280px;
   margin: 0 auto;
