@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.60
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.61
+ *
+ * v3.61 변경
+ *  - KPI 세부보기(openKpiDetail): '지연사유' 열이 있으면 **열은 숨기고** 값이 있는 행은 '정상화 시기'(없으면 마지막 표시열) 셀에 돋보기(.delay-i) 노출 — 월정보 있으면 '월+아이콘', 없으면 아이콘만, 지연사유 없으면 아이콘 없음. 클릭 시 해당 행 아래 펼침(.delay-row), 아코디언(같은 아이콘 재클릭 닫기·다른 아이콘 클릭 시 이전 닫고 열기, 항상 1개). 지연사유 열 없는 시트(총판·자사몰 등)는 기존 렌더 유지. (readDetailSheet가 빈 열 제거하므로 지연사유 미입력 시엔 열 자체가 없어 아이콘 미노출) style.css v3.35.
  *
  * v3.60 변경
  *  - 초기 로딩 시 불완전한 탭 바(팀 탭 주입 전 개요/CEO/의사결정만) 플래시 제거. `.tabs-row`를 CSS로 기본 숨김(visibility:hidden, 공간 유지) → 렌더/에러 완료 시 `revealTabs()`가 `.ready` 부여해 완성된 탭 바만 노출. (style.css v3.34)
@@ -548,12 +551,49 @@ function openKpiDetail(k) {
   let html;
   if (rows.length) {
     const head = rows[0], rest = rows.slice(1);
-    html = `<table class="detail-table"><thead><tr>${head.map(h=>`<th>${escape(h)}</th>`).join("")}</tr></thead>`
-         + `<tbody>${rest.map(r=>`<tr>${r.map(c=>`<td>${escape(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+    // '지연사유' 열이 있으면: 열은 숨기고, 값이 있는 행은 '정상화 시기' 열에 돋보기 아이콘 → 클릭 시 행 아래 펼침(아코디언)
+    const delayIdx = head.findIndex(h => /지연\s*사유/.test(String(h == null ? "" : h)));
+    if (delayIdx >= 0) {
+      const keep = head.map((_, i) => i).filter(i => i !== delayIdx);   // 표시 열(지연사유 제외)
+      let iconCol = head.findIndex(h => /정상화/.test(String(h == null ? "" : h)));
+      if (iconCol < 0 || iconCol === delayIdx) iconCol = keep[keep.length - 1];  // 없으면 마지막 표시 열
+      const MAG = `<svg class="delay-mag" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>`;
+      const thead = `<thead><tr>${keep.map(i => `<th>${escape(head[i])}</th>`).join("")}</tr></thead>`;
+      const body = rest.map((r, ri) => {
+        const delayVal = String(r[delayIdx] == null ? "" : r[delayIdx]).trim();
+        const tds = keep.map(i => {
+          let cell = escape(String(r[i] == null ? "" : r[i]));
+          if (i === iconCol && delayVal) {
+            cell = (cell ? cell + " " : "") + `<button class="delay-i" type="button" data-idx="${ri}" aria-label="지연사유 보기" title="지연사유">${MAG}</button>`;
+          }
+          return `<td>${cell}</td>`;
+        }).join("");
+        const expand = delayVal
+          ? `<tr class="delay-row" data-idx="${ri}" hidden><td colspan="${keep.length}"><div class="delay-box"><b>지연사유</b> ${escape(delayVal)}</div></td></tr>`
+          : "";
+        return `<tr>${tds}</tr>${expand}`;
+      }).join("");
+      html = `<table class="detail-table detail-delay">${thead}<tbody>${body}</tbody></table>`;
+    } else {
+      html = `<table class="detail-table"><thead><tr>${head.map(h=>`<th>${escape(h)}</th>`).join("")}</tr></thead>`
+           + `<tbody>${rest.map(r=>`<tr>${r.map(c=>`<td>${escape(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+    }
   } else {
     html = `<p style="color:var(--text-soft);">세부 내용이 없습니다.</p>`;
   }
-  m.querySelector(".reason-modal-body").innerHTML = html;
+  const body = m.querySelector(".reason-modal-body");
+  body.innerHTML = html;
+  // 돋보기 아코디언: 같은 아이콘 재클릭=닫기, 다른 아이콘 클릭=이전 닫고 새로 열기(항상 1개만)
+  body.querySelectorAll(".delay-i").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = btn.getAttribute("data-idx");
+      const row = body.querySelector(`.delay-row[data-idx="${idx}"]`);
+      const wasOpen = row && !row.hidden;
+      body.querySelectorAll(".delay-row").forEach(r => { r.hidden = true; });
+      body.querySelectorAll(".delay-i.on").forEach(b => b.classList.remove("on"));
+      if (row && !wasOpen) { row.hidden = false; btn.classList.add("on"); }
+    });
+  });
   m.classList.add("open");
 }
 
