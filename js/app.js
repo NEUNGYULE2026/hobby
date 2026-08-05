@@ -569,7 +569,7 @@ function openKpiDetail(k) {
           return `<td>${cell}</td>`;
         }).join("");
         const expand = delayVal
-          ? `<tr class="delay-row" data-idx="${ri}" hidden><td colspan="${keep.length}"><div class="delay-box"><b>지연사유</b> ${escape(delayVal)}</div></td></tr>`
+          ? `<tr class="delay-row" data-idx="${ri}" hidden><td colspan="${keep.length}"><div class="delay-box"><b>지연사유</b><br>${escape(delayVal)}</div></td></tr>`
           : "";
         return `<tr>${tds}</tr>${expand}`;
       }).join("");
