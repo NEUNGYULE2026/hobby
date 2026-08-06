@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.63
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.64
+ *
+ * v3.64 변경
+ *  - 8월 롤오버 대응: trend-data.js 8개월(1~7월 만월 + 8월*) 재생성(총매출·출고수량·브랜드·QTY10). buildTrendOverride 매출현황 행 매칭을 조직개편 신 팀명으로 확장(중고등영업팀→영업1파트·ELT영업팀→영업2파트, 저작권/리플릿 유지)해 26년 8월* 총출고 오버라이드 복구. (데이터 파일 변경 위주, 로직은 override 매칭만)
  *
  * v3.63 변경
  *  - 증감 팝업 접두어 라벨 변경: (지사)→(중고등-지사), (총판)→(ELT-총판). 볼드 정규식도 신 라벨로 갱신(공통 유지).
@@ -1386,8 +1389,8 @@ function buildTrendOverride(rows) {
     const lbl = String(r && r.label != null ? r.label : "");
     const s = Number(r && r.shipped);
     if (!isFinite(s)) return;
-    if (/영업\s*1\s*파트/.test(lbl))      { ov["영업1파트"] = s; partSum += s; hasPart = true; }
-    else if (/영업\s*2\s*파트/.test(lbl)) { ov["영업2파트"] = s; partSum += s; hasPart = true; }
+    if (/중고등|영업\s*1\s*파트/.test(lbl))      { ov["영업1파트"] = s; partSum += s; hasPart = true; }  // 조직개편: 중고등영업팀=구 영업1파트
+    else if (/ELT|영업\s*2\s*파트/.test(lbl)) { ov["영업2파트"] = s; partSum += s; hasPart = true; }  // ELT영업팀=구 영업2파트
     else if (/저작권/.test(lbl))          { if (ov["저작권"] == null) ov["저작권"] = s; }
     else if (/리플릿/.test(lbl))          { if (ov["리플릿"] == null) ov["리플릿"] = s; }
     if (r && r.type === "total")          { ov["전체"] = s; }
