@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.64
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.65
+ *
+ * v3.65 변경
+ *  - 총매출 추세 그룹 명칭 변경(조직개편): 영업1파트→중고등영업팀, 영업2파트→ELT영업팀. 그룹명=데이터 조회 키라 함께 변경: trendCfg groups·범례(app.js) + TREND_DATA.series·progressDaily25 키(trend-data.js) + buildTrendOverride ov 키. (출고수량 탭·부서별 보고는 무관)
  *
  * v3.64 변경
  *  - 8월 롤오버 대응: trend-data.js 8개월(1~7월 만월 + 8월*) 재생성(총매출·출고수량·브랜드·QTY10). buildTrendOverride 매출현황 행 매칭을 조직개편 신 팀명으로 확장(중고등영업팀→영업1파트·ELT영업팀→영업2파트, 저작권/리플릿 유지)해 26년 8월* 총출고 오버라이드 복구. (데이터 파일 변경 위주, 로직은 override 매칭만)
@@ -1389,8 +1392,8 @@ function buildTrendOverride(rows) {
     const lbl = String(r && r.label != null ? r.label : "");
     const s = Number(r && r.shipped);
     if (!isFinite(s)) return;
-    if (/중고등|영업\s*1\s*파트/.test(lbl))      { ov["영업1파트"] = s; partSum += s; hasPart = true; }  // 조직개편: 중고등영업팀=구 영업1파트
-    else if (/ELT|영업\s*2\s*파트/.test(lbl)) { ov["영업2파트"] = s; partSum += s; hasPart = true; }  // ELT영업팀=구 영업2파트
+    if (/중고등|영업\s*1\s*파트/.test(lbl))      { ov["중고등영업팀"] = s; partSum += s; hasPart = true; }  // 구 영업1파트
+    else if (/ELT|영업\s*2\s*파트/.test(lbl)) { ov["ELT영업팀"] = s; partSum += s; hasPart = true; }  // 구 영업2파트
     else if (/저작권/.test(lbl))          { if (ov["저작권"] == null) ov["저작권"] = s; }
     else if (/리플릿/.test(lbl))          { if (ov["리플릿"] == null) ov["리플릿"] = s; }
     if (r && r.type === "total")          { ov["전체"] = s; }
@@ -1411,8 +1414,8 @@ function trendCfg() {
     };
   }
   return {
-    data: TREND_DATA, groups: ["전체", "영업1파트", "영업2파트", "저작권", "리플릿"], div: 1, unit: "억", override: true,
-    legend: '<span><b>영업1파트</b> = 참고서(영/수/국) + 교과서 + AIDT</span><span><b>영업2파트</b> = B&amp;G + OUP</span>',
+    data: TREND_DATA, groups: ["전체", "중고등영업팀", "ELT영업팀", "저작권", "리플릿"], div: 1, unit: "억", override: true,
+    legend: '<span><b>중고등영업팀</b> = 참고서(영/수/국) + 교과서 + AIDT</span><span><b>ELT영업팀</b> = B&amp;G + OUP</span>',
     titleBar: "월별 매출 (26 vs 25)", titleCum: "연누적 매출 추이 (26 vs 25)",
   };
 }
