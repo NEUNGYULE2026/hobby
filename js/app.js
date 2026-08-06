@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.61
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.62
+ *
+ * v3.62 변경
+ *  - KPI 세부보기 지연사유 라벨을 하드코딩('지연사유') 대신 **시트 열 이름 그대로**(head[delayIdx]) 사용 — 시트에서 열명 변경 시 자동 반영(예 '지연사유 및 관리현황'). 감지 정규식 /지연\s*사유/는 그대로(부분 일치).
  *
  * v3.61 변경
  *  - KPI 세부보기(openKpiDetail): '지연사유' 열이 있으면 **열은 숨기고** 값이 있는 행은 '정상화 시기'(없으면 마지막 표시열) 셀에 돋보기(.delay-i) 노출 — 월정보 있으면 '월+아이콘', 없으면 아이콘만, 지연사유 없으면 아이콘 없음. 클릭 시 해당 행 아래 펼침(.delay-row), 아코디언(같은 아이콘 재클릭 닫기·다른 아이콘 클릭 시 이전 닫고 열기, 항상 1개). 지연사유 열 없는 시트(총판·자사몰 등)는 기존 렌더 유지. (readDetailSheet가 빈 열 제거하므로 지연사유 미입력 시엔 열 자체가 없어 아이콘 미노출) style.css v3.35.
@@ -194,7 +197,7 @@
  *  - 팀별 주요 실적: 시트의 노출설정=Y 인 항목만 표시 (백엔드가 이미 필터링)
  */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzeahoJx4A2Ofk-CIsnu3smPNQT2PCGrZ_99d-wFzC5JEb6RApgwPTpW0-Iu9qq4Blo/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxtCQ7om4h3OZdHgbo26D6CUzXSOfp96KxA4xSP1AX9O-d8CHSuAB1fNoalFNbKfbZp/exec";
 
 const NAV_OFFSET = 140;
 let navClickGuard = 0;
@@ -554,7 +557,8 @@ function openKpiDetail(k) {
     // '지연사유' 열이 있으면: 열은 숨기고, 값이 있는 행은 '정상화 시기' 열에 돋보기 아이콘 → 클릭 시 행 아래 펼침(아코디언)
     const delayIdx = head.findIndex(h => /지연\s*사유/.test(String(h == null ? "" : h)));
     if (delayIdx >= 0) {
-      const keep = head.map((_, i) => i).filter(i => i !== delayIdx);   // 표시 열(지연사유 제외)
+      const delayLabel = String(head[delayIdx] == null ? "지연사유" : head[delayIdx]).trim() || "지연사유";  // 시트 열 이름 그대로(예: '지연사유 및 관리현황')
+      const keep = head.map((_, i) => i).filter(i => i !== delayIdx);   // 표시 열(지연사유 열 제외)
       let iconCol = head.findIndex(h => /정상화/.test(String(h == null ? "" : h)));
       if (iconCol < 0 || iconCol === delayIdx) iconCol = keep[keep.length - 1];  // 없으면 마지막 표시 열
       const MAG = `<svg class="delay-mag" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>`;
@@ -564,12 +568,12 @@ function openKpiDetail(k) {
         const tds = keep.map(i => {
           let cell = escape(String(r[i] == null ? "" : r[i]));
           if (i === iconCol && delayVal) {
-            cell = (cell ? cell + " " : "") + `<button class="delay-i" type="button" data-idx="${ri}" aria-label="지연사유 보기" title="지연사유">${MAG}</button>`;
+            cell = (cell ? cell + " " : "") + `<button class="delay-i" type="button" data-idx="${ri}" aria-label="${escape(delayLabel)} 보기" title="${escape(delayLabel)}">${MAG}</button>`;
           }
           return `<td>${cell}</td>`;
         }).join("");
         const expand = delayVal
-          ? `<tr class="delay-row" data-idx="${ri}" hidden><td colspan="${keep.length}"><div class="delay-box"><b>지연사유</b><br>${escape(delayVal)}</div></td></tr>`
+          ? `<tr class="delay-row" data-idx="${ri}" hidden><td colspan="${keep.length}"><div class="delay-box"><b>${escape(delayLabel)}</b><br>${escape(delayVal)}</div></td></tr>`
           : "";
         return `<tr>${tds}</tr>${expand}`;
       }).join("");
