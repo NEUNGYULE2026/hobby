@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.62
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.63
+ *
+ * v3.63 변경
+ *  - 증감 팝업 접두어 라벨 변경: (지사)→(중고등-지사), (총판)→(ELT-총판). 볼드 정규식도 신 라벨로 갱신(공통 유지).
  *
  * v3.62 변경
  *  - KPI 세부보기 지연사유 라벨을 하드코딩('지연사유') 대신 **시트 열 이름 그대로**(head[delayIdx]) 사용 — 시트에서 열명 변경 시 자동 반영(예 '지연사유 및 관리현황'). 감지 정규식 /지연\s*사유/는 그대로(부분 일치).
@@ -635,8 +638,8 @@ function renderMonthlySales(ms) {
   // 일반/합계 행: 자기 비고. 월마감 예상매출 합계 행: 마감 예상매출 표의 영업1(지사)·영업2(총판) 비고 합산.
   const _ft0 = ms.forecastTotal || {};
   const _fLines = [];
-  if (nz(_ft0.part1Remark)) _fLines.push('(지사)\n' + nz(_ft0.part1Remark));
-  if (nz(_ft0.part2Remark)) _fLines.push('(총판)\n' + nz(_ft0.part2Remark));
+  if (nz(_ft0.part1Remark)) _fLines.push('(중고등-지사)\n' + nz(_ft0.part1Remark));
+  if (nz(_ft0.part2Remark)) _fLines.push('(ELT-총판)\n' + nz(_ft0.part2Remark));
   const forecastReason = _fLines.join('\n\n'); // 지사·총판 사이에 빈 줄 1개 확보
   const commonTableHTML = buildCommonContent(_ft0.commonGrid); // (공통) — 합계행 비고 시트명 내용을 표/텍스트 블록으로 렌더
   const showReason = rows.some(r => nz(r.remark)) || !!forecastReason || !!commonTableHTML;
@@ -828,7 +831,7 @@ function openReasonModal(text, extraHTML) {
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   }
   // 텍스트: HTML 이스케이프 후 (지사)/(총판)/(공통) 접두어만 볼드(개행은 white-space:pre-wrap가 렌더). extraHTML(공통 표)은 그 아래에.
-  const boldText = escape(text || "").replace(/\((지사|총판|공통)\)/g, '<strong>($1)</strong>');
+  const boldText = escape(text || "").replace(/\((중고등-지사|ELT-총판|공통)\)/g, '<strong>($1)</strong>');
   modal.querySelector('.reason-modal-body').innerHTML =
     (boldText ? `<div class="reason-text">${boldText}</div>` : '') + (extraHTML || '');
   // (공통) 표가 있으면 모달 폭 확장(표 잘림 방지)
