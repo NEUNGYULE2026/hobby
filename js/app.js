@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.65
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.66
+ *
+ * v3.66 변경
+ *  - 부서별 주간 보고 헤더 문구 변경: 지연사유→이슈사항, (차주)예정사항→사유/해결책(DEPT_HEADERS_DEFAULT). 팀 카드 배경색 전 팀 통일(팔레트 순환 폐기 → 전부 t-sales 네이비).
  *
  * v3.65 변경
  *  - 총매출 추세 그룹 명칭 변경(조직개편): 영업1파트→중고등영업팀, 영업2파트→ELT영업팀. 그룹명=데이터 조회 키라 함께 변경: trendCfg groups·범례(app.js) + TREND_DATA.series·progressDaily25 키(trend-data.js) + buildTrendOverride ov 키. (출고수량 탭·부서별 보고는 무관)
@@ -317,11 +320,11 @@ function render(d) {
   const ceo         = d.ceo || [];
   const decisions   = d.decisions || [];
   // 부서별 주간 보고 — 팀 열 값 기반 동적 팀(Code.gs parseDeptTeamsDynamic). 팀명별 카드, '팀명-파트명'이면 팀 안에서 파트 구분.
-  const TEAM_PALETTE = ["t-sales","t-digital","t-test","t-netimes","t-regional"];
+  // 팀 영역 배경색은 전 팀 동일(t-sales 네이비)로 통일.
   const teamCards = (Array.isArray(d.teams) ? d.teams : []).map((t, i) => ({
     id: "team-" + i,
     name: t.name,
-    cls: TEAM_PALETTE[i % TEAM_PALETTE.length],
+    cls: "t-sales",
     parts: t.parts || [],
     items: t.items || [],
   }));
@@ -1023,7 +1026,7 @@ function openProgressBasis(task, pct, basis) {
 }
 
 // 부서별 주간 보고 기본 헤더(수도권세일즈팀 등). 진행사항→(금주)진행사항, 예정사항→(차주)예정사항
-const DEPT_HEADERS_DEFAULT = ["업무","목적","시작일","종료일","진척율","(금주)진행사항","지연사유","(차주)예정사항"];
+const DEPT_HEADERS_DEFAULT = ["업무","목적","시작일","종료일","진척율","(금주)진행사항","이슈사항","사유/해결책"];
 
 // 부서별 주간 보고 — 파트별 표. headers로 열 라벨 커스터마이즈(팀별 상이 가능)
 function renderDeptTable(items, headers) {
