@@ -658,7 +658,7 @@ function renderMonthlySales(ms) {
     const t = nz(text);
     const common = withCommon && commonTableHTML;
     if (!t && !common) return `<td class="reason-cell"></td>`;
-    return `<td class="reason-cell"><button class="reason-btn" type="button" data-reason="${escape(t)}"${common ? ' data-common="1"' : ''} aria-label="증감사유 보기" title="증감사유">${REASON_ICON}</button></td>`;
+    return `<td class="reason-cell"><button class="reason-btn" type="button" data-reason="${escape(t)}"${common ? ' data-common="1"' : ''} aria-label="비고 보기" title="비고">${REASON_ICON}</button></td>`;
   }
 
   const h = ms.headers || {};
@@ -690,7 +690,7 @@ function renderMonthlySales(ms) {
             <th colspan="3" class="grp gsep">${escape(h.targetGroup || '목표')}</th>
             <th colspan="3" class="grp gsep">${escape(h.actualGroup || '실적')}</th>
             <th rowspan="2" class="num gsep prog-th">${escape(h.progress || '진척율')}<span class="prog-basis">(총출고 기준)</span></th>
-            ${showReason ? `<th rowspan="2" class="reason-col">증감사유</th>` : ""}
+            ${showReason ? `<th rowspan="2" class="reason-col">비고</th>` : ""}
           </tr>
           <tr>
             <th class="num sub tgt gsep">${sS}</th><th class="num sub tgt">${sR}</th><th class="num sub tgt">${sN}</th>
@@ -738,7 +738,7 @@ function renderMonthlySales(ms) {
           <th class="num">${escape(hh.returns)}</th>
           <th class="num">${escape(hh.net)}</th>
           <th class="num">${escape(hh.progress)}</th>
-          ${showReason ? `<th class="reason-col">증감사유</th>` : ""}
+          ${showReason ? `<th class="reason-col">비고</th>` : ""}
         </tr></thead>
         <tbody>${body}</tbody>
       </table>`;
