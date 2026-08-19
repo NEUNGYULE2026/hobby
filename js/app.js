@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.66
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.67
+ *
+ * v3.67 변경
+ *  - 추세 차트 Y축 고정: 선택(그룹/채널/브랜드)과 무관하게 동일 축 → 그래프 높이로 비중 비교 가능. '전체' 그룹(전체 채널) 최대치×1.08을 suggestedMax로(월별=월 최대, 연누적=최종 누적 최대). 지표(억/천)·기간(월별/연누적)별 별도 상한. beginAtZero. 소형 그룹(리플릿·OUP·브랜드)은 바닥에 붙어 비중 직관.
  *
  * v3.66 변경
  *  - 부서별 주간 보고 헤더 문구 변경: 지연사유→이슈사항, (차주)예정사항→사유/해결책(DEPT_HEADERS_DEFAULT). 팀 카드 배경색 전 팀 통일(팔레트 순환 폐기 → 전부 t-sales 네이비).
@@ -1652,12 +1655,20 @@ function renderTrendChart() {
   const dv = a => a.map(v => v / div);
   const cum = a => a.reduce((acc, v, i) => (acc.push((i ? acc[i - 1] : 0) + v), acc), []);
   const f1 = n => Number(n).toFixed(1);
+  // Y축 고정: '전체' 그룹(전체 채널) 최대치를 상한으로 → 그룹/채널/브랜드 선택과 무관하게 동일 축(비중을 높이로 비교). 월별/연누적 각각 별도.
+  const refBase = cfg.hasChannel ? ((cfg.data.series["전체"] || {})["전체"] || {}) : (cfg.data.series["전체"] || {});
+  let r26 = (refBase.y26 || []).slice();
+  if (cfg.override && trendLastOverride && trendLastOverride["전체"] != null && r26.length) r26[r26.length - 1] = trendLastOverride["전체"];
+  const r25 = refBase.y25 || [];
+  const refMax = 1.08 * (trendState.p === "연누적"
+    ? Math.max((cum(dv(r26)).slice(-1)[0]) || 0, (cum(dv(r25)).slice(-1)[0]) || 0)
+    : Math.max(0, ...dv(r26), ...dv(r25)));
   if (trendChart) { trendChart.destroy(); trendChart = null; }
   const opts = t => ({ responsive: true, maintainAspectRatio: false, layout: { padding: { top: 14 } },
     plugins: { title: { display: true, text: `${t} · ${trendState.g}${(cfg.hasChannel && trendState.ch !== "전체") ? " · " + trendState.ch : ""}`, color: "#243B53", font: { size: 13, weight: "600" } },
       legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } },
       tooltip: { callbacks: { label: c => `${c.dataset.label} ${f1(c.parsed.y)}${unit}` } } },
-    scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => v + unit }, grid: { color: "#EDF2F7" } } } });
+    scales: { x: { grid: { display: false } }, y: { beginAtZero: true, suggestedMax: refMax, ticks: { callback: v => v + unit }, grid: { color: "#EDF2F7" } } } });
   if (trendState.p === "연누적") {
     trendChart = new Chart(ctx, { type: "line", data: { labels: cfg.data.months, datasets: [
       { label: "2026 누적", data: cum(dv(y26)), borderColor: "#1F5E92", backgroundColor: "#1F5E92", borderWidth: 2.5, tension: .25, pointRadius: 3 },
