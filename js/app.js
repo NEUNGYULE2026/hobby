@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.68
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.69
+ *
+ * v3.69 변경
+ *  - 연누적(라인) 툴팁 mode 'index'+intersect false → 같은 월의 26·25 누적을 한 툴팁에 함께 표시. 막대(월별)는 nearest 유지(개별).
  *
  * v3.68 변경
  *  - 연누적(라인) 값 라벨 겹침 정리(trendValueLabels): 두 선 라벨을 위 선=위쪽·아래 선=아래쪽으로 분리(인덱스별 y비교), 아래 라벨은 X축과 겹치지 않게 chartArea.bottom-12로 clamp. 막대(월별)는 기존 유지.
@@ -1689,7 +1692,10 @@ function renderTrendChart() {
   const opts = t => ({ responsive: true, maintainAspectRatio: false, layout: { padding: { top: 14 } },
     plugins: { title: { display: true, text: `${t} · ${trendState.g}${(cfg.hasChannel && trendState.ch !== "전체") ? " · " + trendState.ch : ""}`, color: "#243B53", font: { size: 13, weight: "600" } },
       legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } },
-      tooltip: { callbacks: { label: c => `${c.dataset.label} ${f1(c.parsed.y)}${unit}` } } },
+      tooltip: {
+        mode: trendState.p === "연누적" ? "index" : "nearest",   // 연누적(라인): 같은 월의 26·25를 한 툴팁에 모두 표시
+        intersect: trendState.p === "연누적" ? false : true,
+        callbacks: { label: c => `${c.dataset.label} ${f1(c.parsed.y)}${unit}` } } },
     scales: { x: { grid: { display: false } }, y: { beginAtZero: true, suggestedMax: refMax, ticks: { callback: v => v + unit }, grid: { color: "#EDF2F7" } } } });
   if (trendState.p === "연누적") {
     trendChart = new Chart(ctx, { type: "line", data: { labels: cfg.data.months, datasets: [
