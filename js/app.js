@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.67
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.68
+ *
+ * v3.68 변경
+ *  - 연누적(라인) 값 라벨 겹침 정리(trendValueLabels): 두 선 라벨을 위 선=위쪽·아래 선=아래쪽으로 분리(인덱스별 y비교), 아래 라벨은 X축과 겹치지 않게 chartArea.bottom-12로 clamp. 막대(월별)는 기존 유지.
  *
  * v3.67 변경
  *  - 추세 차트 Y축 고정: 선택(그룹/채널/브랜드)과 무관하게 동일 축 → 그래프 높이로 비중 비교 가능. '전체' 그룹(전체 채널) 최대치×1.08을 suggestedMax로(월별=월 최대, 연누적=최종 누적 최대). 지표(억/천)·기간(월별/연누적)별 별도 상한. beginAtZero. 소형 그룹(리플릿·OUP·브랜드)은 바닥에 붙어 비중 직관.
@@ -1462,18 +1465,37 @@ const trendValueLabels = {
     ctx.save();
     ctx.font = "600 10px Pretendard, system-ui, sans-serif";
     ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    chart.data.datasets.forEach((ds, di) => {
-      const meta = chart.getDatasetMeta(di);
-      if (meta.hidden) return;
-      const color = (typeof ds.borderColor === "string" ? ds.borderColor : null) || (typeof ds.backgroundColor === "string" ? ds.backgroundColor : "#243B53");
-      ctx.fillStyle = color;
-      meta.data.forEach((el, i) => {
-        const v = ds.data[i];
-        if (v == null) return;
-        ctx.fillText(Number(v).toFixed(1), el.x, el.y - 3);
+    const ds = chart.data.datasets;
+    const dcol = d => (typeof d.borderColor === "string" ? d.borderColor : null) || (typeof d.backgroundColor === "string" ? d.backgroundColor : "#243B53");
+    const isLine = chart.config.type === "line";
+    const m0 = chart.getDatasetMeta(0), m1 = ds.length > 1 ? chart.getDatasetMeta(1) : null;
+    if (isLine && m1 && !m0.hidden && !m1.hidden) {
+      // 연누적 라인: 두 선 라벨이 겹치므로 위 선=위쪽 / 아래 선=아래쪽으로 분리, 아래 라벨은 X축과 안 겹치게 clamp
+      const bottom = chart.chartArea.bottom;
+      const c0 = dcol(ds[0]), c1 = dcol(ds[1]);
+      m0.data.forEach((e0, i) => {
+        const e1 = m1.data[i]; if (!e1) return;
+        const v0 = ds[0].data[i], v1 = ds[1].data[i];
+        if (v0 == null || v1 == null) return;
+        let up, down, uV, dV, uC, dC;
+        if (e0.y <= e1.y) { up = e0; down = e1; uV = v0; dV = v1; uC = c0; dC = c1; }
+        else              { up = e1; down = e0; uV = v1; dV = v0; uC = c1; dC = c0; }
+        ctx.fillStyle = uC; ctx.textBaseline = "bottom"; ctx.fillText(Number(uV).toFixed(1), up.x, up.y - 6);
+        ctx.fillStyle = dC; ctx.textBaseline = "top";
+        ctx.fillText(Number(dV).toFixed(1), down.x, Math.min(down.y + 7, bottom - 12));
       });
-    });
+    } else {
+      ds.forEach((d, di) => {
+        const meta = chart.getDatasetMeta(di);
+        if (meta.hidden) return;
+        ctx.fillStyle = dcol(d); ctx.textBaseline = "bottom";
+        meta.data.forEach((el, i) => {
+          const v = d.data[i];
+          if (v == null) return;
+          ctx.fillText(Number(v).toFixed(1), el.x, el.y - 3);
+        });
+      });
+    }
     ctx.restore();
   }
 };
