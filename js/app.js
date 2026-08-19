@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.70
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.71
+ *
+ * v3.71 변경
+ *  - 새로고침 체감 속도 개선: loadData를 캐시 우선(stale-while-revalidate) 방식으로 변경. 직전 응답을 localStorage(cmkDash:<week>)에 저장하고, 재접속·새로고침 시 캐시를 '즉시' 렌더한 뒤 백그라운드로 최신본을 받아 내용이 바뀐 경우에만 재렌더. 갱신 중에는 새로고침 버튼이 '갱신 중…'으로 표시(비활성). 서버(Apps Script) 자체 응답시간은 그대로지만, 사용자 체감상 새로고침이 즉시 뜸. fetch 실패 시 캐시가 있으면 에러로 덮지 않고 기존 화면 유지.
  *
  * v3.70 변경
  *  - loadData 자동 재시도(최대 3회, 0.7s·1.4s 점증 지연). Apps Script 엔드포인트의 간헐적 404/5xx/네트워크 오류에 대응(URL 정상인데 대시보드만 404 뜨던 현상 완화). 3회 모두 실패 시에만 에러+새로고침 안내.
@@ -244,14 +247,26 @@ async function loadInitial() {
   await loadData(week);
 }
 
+function setRefreshing(on) {
+  const b = document.getElementById("refresh-btn");
+  if (b) { b.textContent = on ? "갱신 중…" : "새로고침"; b.disabled = on; }
+}
+
 async function loadData(weekKey) {
   const root = document.getElementById("app");
-  root.innerHTML = '<div class="loading">대시보드 데이터를 불러오는 중입니다…</div>';
+  const cacheKey = "cmkDash:" + (weekKey || "latest");
+  // 1) 캐시가 있으면 '즉시' 렌더(체감 속도 개선). 이후 백그라운드로 최신 데이터를 받아 변경 시에만 교체(stale-while-revalidate).
+  let cachedStr = null, hasCache = false;
+  try {
+    cachedStr = localStorage.getItem(cacheKey);
+    if (cachedStr) { const d = JSON.parse(cachedStr); LAST_DATA = d; render(d); hasCache = true; }
+  } catch (e) { cachedStr = null; }
+  if (!hasCache) root.innerHTML = '<div class="loading">대시보드 데이터를 불러오는 중입니다…</div>';
   if (!API_URL || API_URL.indexOf("Apps-Script") !== -1) {
-    root.innerHTML = '<div class="error">API_URL이 설정되지 않았습니다. app.js 의 API_URL 에 Apps Script 웹앱 URL을 입력하세요.</div>';
-    revealTabs();
+    if (!hasCache) { root.innerHTML = '<div class="error">API_URL이 설정되지 않았습니다. app.js 의 API_URL 에 Apps Script 웹앱 URL을 입력하세요.</div>'; revealTabs(); }
     return;
   }
+  setRefreshing(true);
   // Apps Script 엔드포인트는 배포 직후/구글 부하 시 간헐적 404·5xx·네트워크 오류가 날 수 있어 자동 재시도(최대 3회, 점증 지연)
   const qs = weekKey ? `?week=${encodeURIComponent(weekKey)}` : "";
   const url = `${API_URL}${qs}`;
@@ -261,21 +276,28 @@ async function loadData(weekKey) {
     try {
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const fresh = await res.text();
+      const data = JSON.parse(fresh);
       if (data.error) throw new Error(data.error);
       LAST_DATA = data;
-      render(data);
+      try { localStorage.setItem(cacheKey, fresh); } catch (e) {}
+      if (!hasCache || fresh !== cachedStr) render(data);   // 변경 시에만 재렌더(불필요한 깜빡임·스크롤/패널 상태 리셋 방지)
+      setRefreshing(false);
       return;
     } catch (err) {
       lastErr = err;
       if (i < ATTEMPTS - 1) {
-        root.innerHTML = `<div class="loading">대시보드 데이터를 불러오는 중입니다… (재시도 ${i + 1})</div>`;
+        if (!hasCache) root.innerHTML = `<div class="loading">대시보드 데이터를 불러오는 중입니다… (재시도 ${i + 1})</div>`;
         await new Promise(r => setTimeout(r, 700 * (i + 1)));   // 0.7s, 1.4s 대기 후 재시도
       }
     }
   }
-  root.innerHTML = `<div class="error">데이터를 불러오지 못했습니다: ${lastErr.message}<br><span style="font-size:12px;color:var(--text-soft)">잠시 후 '새로고침'을 눌러 주세요.</span></div>`;
-  revealTabs();
+  // 전부 실패: 캐시가 있으면 그대로 유지(에러로 덮지 않음), 없으면 에러 표시
+  setRefreshing(false);
+  if (!hasCache) {
+    root.innerHTML = `<div class="error">데이터를 불러오지 못했습니다: ${lastErr.message}<br><span style="font-size:12px;color:var(--text-soft)">잠시 후 '새로고침'을 눌러 주세요.</span></div>`;
+    revealTabs();
+  }
   console.error(lastErr);
 }
 
