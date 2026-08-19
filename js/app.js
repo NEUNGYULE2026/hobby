@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.71
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.72
+ *
+ * v3.72 변경
+ *  - KPI 세부보기 '지연 로딩': 메인 응답에 세부표(지사/총판/자사몰 등 수백 행)를 싣지 않고, 돋보기 클릭 시에만 ?action=detail&sheet=<시트명> 으로 해당 세부표 1개를 받아 렌더. → 메인 doGet 응답이 크게 가벼워져 새로고침 속도 개선. 받은 세부표는 세션 캐시(DETAIL_CACHE)+카드 객체에 저장해 재클릭 시 즉시. 로딩 중 표시·3회 재시도·다른 카드 열림 시 이전 응답 폐기 처리. openKpiDetail→async, 표 렌더는 renderKpiDetailBody로 분리. 세부보기 버튼 노출은 detailSheet 유무로 판정(구 응답의 k.detail 배열도 호환). Code.gs v3.19와 함께 배포 필요.
  *
  * v3.71 변경
  *  - 새로고침 체감 속도 개선: loadData를 캐시 우선(stale-while-revalidate) 방식으로 변경. 직전 응답을 localStorage(cmkDash:<week>)에 저장하고, 재접속·새로고침 시 캐시를 '즉시' 렌더한 뒤 백그라운드로 최신본을 받아 내용이 바뀐 경우에만 재렌더. 갱신 중에는 새로고침 버튼이 '갱신 중…'으로 표시(비활성). 서버(Apps Script) 자체 응답시간은 그대로지만, 사용자 체감상 새로고침이 즉시 뜸. fetch 실패 시 캐시가 있으면 에러로 덮지 않고 기존 화면 유지.
@@ -524,7 +527,8 @@ function renderKpis(kpis) {
   el.innerHTML = kpis.map((k, i) => {
     const stageChip = k.stage ? `<span class="kpi-stage">${escape(k.stage)}</span>` : "";
     const isGonggyo = isGonggyoKpi(k);
-    const hasDetail = isGonggyo || !!(k.detail && k.detail.length);
+    // 세부보기 버튼: detail 본문은 지연 로딩되므로 detailSheet(시트명) 유무로 판정. (구 응답 호환: k.detail 배열도 인정)
+    const hasDetail = isGonggyo || !!k.detailSheet || !!(k.detail && k.detail.length);
     // 고3영어 카드: 하단 버튼 = '선택교과 영업현황'(외부 링크 _blank). 그 외: 기존 '세부보기'.
     const footBtn = isGonggyo
       ? `<a class="detail-btn" href="https://necrm-2026.vercel.app/" target="_blank" rel="noopener">🔗 선택교과 영업현황</a>`
@@ -584,8 +588,32 @@ function renderKpis(kpis) {
   });
 }
 
-// KPI 세부보기 — 세부 시트 내용을 표로 레이어창에 표시(타이틀 고정 + 본문 세로 스크롤)
-function openKpiDetail(k) {
+// 세부 시트 지연 로딩 캐시(시트명 → 2차원 배열). 세션 내 재클릭 시 재요청 방지.
+const DETAIL_CACHE = {};
+async function fetchDetailSheet(sheetName) {
+  if (DETAIL_CACHE[sheetName]) return DETAIL_CACHE[sheetName];
+  const url = `${API_URL}?action=detail&sheet=${encodeURIComponent(sheetName)}`;
+  const ATTEMPTS = 3;
+  let lastErr;
+  for (let i = 0; i < ATTEMPTS; i++) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const rows = data.detail || [];
+      DETAIL_CACHE[sheetName] = rows;
+      return rows;
+    } catch (err) {
+      lastErr = err;
+      if (i < ATTEMPTS - 1) await new Promise(r => setTimeout(r, 500 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
+// KPI 세부보기 — 세부 시트 내용을 표로 레이어창에 표시(타이틀 고정 + 본문 세로 스크롤). 세부 본문은 클릭 시 지연 로딩.
+async function openKpiDetail(k) {
   if (isGonggyoKpi(k) && typeof Chart !== "undefined") { openGonggyoDetail(); return; }
   let m = document.getElementById("kpi-detail-modal");
   if (!m) {
@@ -608,7 +636,30 @@ function openKpiDetail(k) {
     document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
   }
   m.querySelector(".reason-modal-title").textContent = k.name || "세부보기";
-  const rows = k.detail || [];
+  const bodyEl = m.querySelector(".reason-modal-body");
+  // 세부 본문 확보: 이미 로딩됐으면 재사용, 아니면 시트명으로 지연 로딩(로딩 표시).
+  let rows = k.detail || [];
+  const reqToken = (openKpiDetail._token = (openKpiDetail._token || 0) + 1);
+  if (!rows.length && k.detailSheet) {
+    bodyEl.innerHTML = `<p style="color:var(--text-soft);">세부 내용을 불러오는 중입니다…</p>`;
+    m.classList.add("open");
+    try {
+      rows = await fetchDetailSheet(k.detailSheet);
+      k.detail = rows;   // 객체에도 캐시(같은 카드 재클릭 시 즉시)
+    } catch (err) {
+      if (openKpiDetail._token === reqToken)
+        bodyEl.innerHTML = `<p style="color:var(--danger,#c0392b);">세부 내용을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>`;
+      return;
+    }
+    if (openKpiDetail._token !== reqToken) return;  // 로딩 중 다른 카드 열림 → 이 응답 폐기
+  }
+  renderKpiDetailBody(bodyEl, rows);
+  m.classList.add("open");
+}
+
+// 세부 표 렌더 + 지연사유 아코디언 배선 (openKpiDetail에서 분리)
+function renderKpiDetailBody(bodyEl, rows) {
+  rows = rows || [];
   let html;
   if (rows.length) {
     const head = rows[0], rest = rows.slice(1);
@@ -643,20 +694,18 @@ function openKpiDetail(k) {
   } else {
     html = `<p style="color:var(--text-soft);">세부 내용이 없습니다.</p>`;
   }
-  const body = m.querySelector(".reason-modal-body");
-  body.innerHTML = html;
+  bodyEl.innerHTML = html;
   // 돋보기 아코디언: 같은 아이콘 재클릭=닫기, 다른 아이콘 클릭=이전 닫고 새로 열기(항상 1개만)
-  body.querySelectorAll(".delay-i").forEach(btn => {
+  bodyEl.querySelectorAll(".delay-i").forEach(btn => {
     btn.addEventListener("click", () => {
       const idx = btn.getAttribute("data-idx");
-      const row = body.querySelector(`.delay-row[data-idx="${idx}"]`);
+      const row = bodyEl.querySelector(`.delay-row[data-idx="${idx}"]`);
       const wasOpen = row && !row.hidden;
-      body.querySelectorAll(".delay-row").forEach(r => { r.hidden = true; });
-      body.querySelectorAll(".delay-i.on").forEach(b => b.classList.remove("on"));
+      bodyEl.querySelectorAll(".delay-row").forEach(r => { r.hidden = true; });
+      bodyEl.querySelectorAll(".delay-i.on").forEach(b => b.classList.remove("on"));
       if (row && !wasOpen) { row.hidden = false; btn.classList.add("on"); }
     });
   });
-  m.classList.add("open");
 }
 
 /* ============================================================
