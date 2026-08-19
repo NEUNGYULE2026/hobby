@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.69
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.70
+ *
+ * v3.70 변경
+ *  - loadData 자동 재시도(최대 3회, 0.7s·1.4s 점증 지연). Apps Script 엔드포인트의 간헐적 404/5xx/네트워크 오류에 대응(URL 정상인데 대시보드만 404 뜨던 현상 완화). 3회 모두 실패 시에만 에러+새로고침 안내.
  *
  * v3.69 변경
  *  - 연누적(라인) 툴팁 mode 'index'+intersect false → 같은 월의 26·25 누적을 한 툴팁에 함께 표시. 막대(월별)는 nearest 유지(개별).
@@ -249,19 +252,31 @@ async function loadData(weekKey) {
     revealTabs();
     return;
   }
-  try {
-    const qs = weekKey ? `?week=${encodeURIComponent(weekKey)}` : "";
-    const res = await fetch(`${API_URL}${qs}`, { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    LAST_DATA = data;
-    render(data);
-  } catch (err) {
-    root.innerHTML = `<div class="error">데이터를 불러오지 못했습니다: ${err.message}</div>`;
-    revealTabs();
-    console.error(err);
+  // Apps Script 엔드포인트는 배포 직후/구글 부하 시 간헐적 404·5xx·네트워크 오류가 날 수 있어 자동 재시도(최대 3회, 점증 지연)
+  const qs = weekKey ? `?week=${encodeURIComponent(weekKey)}` : "";
+  const url = `${API_URL}${qs}`;
+  const ATTEMPTS = 3;
+  let lastErr;
+  for (let i = 0; i < ATTEMPTS; i++) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      LAST_DATA = data;
+      render(data);
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (i < ATTEMPTS - 1) {
+        root.innerHTML = `<div class="loading">대시보드 데이터를 불러오는 중입니다… (재시도 ${i + 1})</div>`;
+        await new Promise(r => setTimeout(r, 700 * (i + 1)));   // 0.7s, 1.4s 대기 후 재시도
+      }
+    }
   }
+  root.innerHTML = `<div class="error">데이터를 불러오지 못했습니다: ${lastErr.message}<br><span style="font-size:12px;color:var(--text-soft)">잠시 후 '새로고침'을 눌러 주세요.</span></div>`;
+  revealTabs();
+  console.error(lastErr);
 }
 
 function bindTopBar() {
