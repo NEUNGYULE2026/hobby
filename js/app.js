@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.73
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.74
+ *
+ * v3.74 변경
+ *  - 추세 Y축 눈금 구간 세분화: 총매출=2.5억 / 출고수량=2.5만(=25천). 월별은 이 구간 유지, 눈금 22개 초과 시(연누적)만 배수(×2) 확장(총매출 연누적≈20억·출고 연누적≈10만). 차트 높이 360→420px(css v3.37).
  *
  * v3.73 변경
  *  - 추세 차트 Y축 눈금 구간 지정: 총매출=5억 / 출고수량=5만(=50천). 기본 구간으로 눈금이 15개 초과 시(연누적 등) 그 배수로 자동 확장(총매출 연누적≈20억·출고 연누적≈15만), 최댓값은 구간 배수로 정렬(max·stepSize 명시, 기존 suggestedMax 대체). 구간은 고정축(전체 그룹 최대치) 기준이라 그룹 선택과 무관하게 일정 → 비중 비교 유지. 차트 영역 높이 280→360px(css v3.36)로 볼륨감 강화.
@@ -1777,10 +1780,10 @@ function renderTrendChart() {
   const refMax = 1.08 * (trendState.p === "연누적"
     ? Math.max((cum(dv(r26)).slice(-1)[0]) || 0, (cum(dv(r25)).slice(-1)[0]) || 0)
     : Math.max(0, ...dv(r26), ...dv(r25)));
-  // Y축 눈금 구간: 총매출=5억 / 출고수량=5만(=50천). 기본 구간으로 눈금이 너무 많아지면(연누적 등) 그 배수로 자동 확장(≤15개 유지). 최댓값은 구간 배수로 정렬.
-  const baseStep = (trendState.metric === "출고수량") ? 50 : 5;
+  // Y축 눈금 구간: 총매출=2.5억 / 출고수량=2.5만(=25천). 월별은 이 구간 유지, 눈금이 22개 초과 시(연누적 등)만 배수(×2)로 확장(2.5→5→10→20 / 25→50→100…). 최댓값은 구간 배수로 정렬.
+  const baseStep = (trendState.metric === "출고수량") ? 25 : 2.5;
   let yStep = baseStep;
-  while (refMax / yStep > 15) yStep += baseStep;
+  while (refMax / yStep > 22) yStep *= 2;
   const yMax = Math.max(yStep, Math.ceil(refMax / yStep) * yStep);
   if (trendChart) { trendChart.destroy(); trendChart = null; }
   const opts = t => ({ responsive: true, maintainAspectRatio: false, layout: { padding: { top: 14 } },
