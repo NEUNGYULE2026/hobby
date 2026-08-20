@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.74
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.75
+ *
+ * v3.75 변경
+ *  - [버그수정] Y축 세분 구간(2.5억/2.5만)이 화면에 반영되지 않던 문제. Chart.js 기본 ticks.maxTicksLimit(11) 때문에 눈금 22개가 자동 솎아져 ≈5억처럼 보였음 → maxTicksLimit을 구간 수(yMax/yStep+2)로 상향해 지정 구간 그대로 표시.
  *
  * v3.74 변경
  *  - 추세 Y축 눈금 구간 세분화: 총매출=2.5억 / 출고수량=2.5만(=25천). 월별은 이 구간 유지, 눈금 22개 초과 시(연누적)만 배수(×2) 확장(총매출 연누적≈20억·출고 연누적≈10만). 차트 높이 360→420px(css v3.37).
@@ -1793,7 +1796,7 @@ function renderTrendChart() {
         mode: trendState.p === "연누적" ? "index" : "nearest",   // 연누적(라인): 같은 월의 26·25를 한 툴팁에 모두 표시
         intersect: trendState.p === "연누적" ? false : true,
         callbacks: { label: c => `${c.dataset.label} ${f1(c.parsed.y)}${unit}` } } },
-    scales: { x: { grid: { display: false } }, y: { beginAtZero: true, max: yMax, ticks: { stepSize: yStep, callback: v => v + unit }, grid: { color: "#EDF2F7" } } } });
+    scales: { x: { grid: { display: false } }, y: { beginAtZero: true, max: yMax, ticks: { stepSize: yStep, maxTicksLimit: Math.round(yMax / yStep) + 2, callback: v => v + unit }, grid: { color: "#EDF2F7" } } } });
   if (trendState.p === "연누적") {
     trendChart = new Chart(ctx, { type: "line", data: { labels: cfg.data.months, datasets: [
       { label: "2026 누적", data: cum(dv(y26)), borderColor: "#1F5E92", backgroundColor: "#1F5E92", borderWidth: 2.5, tension: .25, pointRadius: 3 },
