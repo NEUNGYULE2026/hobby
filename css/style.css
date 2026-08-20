@@ -23,6 +23,7 @@
  * v3.33 — (출원사별) 점유율 버튼(.gg-pub-btn)+매트릭스 레이어(.gg-pub-box·.gg-pub-table, NE능률 강조·가로 스크롤)
  * v3.34 — 로딩 중 탭 바 숨김(.tabs-row visibility:hidden → .ready 노출)로 초기 불완전 탭 플래시 제거
  * v3.35 — KPI 세부보기 지연사유 돋보기(.delay-i)+펼침 행(.delay-row·.delay-box) 아코디언
+ * v3.36 — 추세 차트 영역(.trend-cw) 높이 280→360px(Y축 구간 세분화 시 볼륨감)
  * v3.16 — KPI 카드 flex 세로 구조(같은 줄 높이 통일 + 하단 배지/버튼 정렬)
  * v3.17 — 텍스트형 KPI 달성율 컴팩트 인라인 미니바(.kpi-trate)
  * v3.18 — 달성율 미니바 여백 축소(실적 바로 아래로 올림)
@@ -1270,7 +1271,7 @@ a { color: inherit; text-decoration: none; }
 .q10-note{font-size:11px;color:var(--text-soft);line-height:1.45;margin:8px 2px 0;}
 .t-chip.up{background:#DCFCE7;color:var(--status-good);}
 .t-chip.down{background:#FEE2E2;color:var(--status-bad);}
-.trend-cw{position:relative;height:280px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;}
+.trend-cw{position:relative;height:360px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;}
 .trend-cap{font-size:11.5px;color:var(--text-faded);margin-top:10px;}
 
 /* v3.10 추가 — 추세 패널: 파트 구성 범례(토글 우측), 막대 값 라벨은 app.js 인라인 플러그인 */

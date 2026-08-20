@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.72
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.73
+ *
+ * v3.73 변경
+ *  - 추세 차트 Y축 눈금 구간 지정: 총매출=5억 / 출고수량=5만(=50천). 기본 구간으로 눈금이 15개 초과 시(연누적 등) 그 배수로 자동 확장(총매출 연누적≈20억·출고 연누적≈15만), 최댓값은 구간 배수로 정렬(max·stepSize 명시, 기존 suggestedMax 대체). 구간은 고정축(전체 그룹 최대치) 기준이라 그룹 선택과 무관하게 일정 → 비중 비교 유지. 차트 영역 높이 280→360px(css v3.36)로 볼륨감 강화.
  *
  * v3.72 변경
  *  - KPI 세부보기 '지연 로딩': 메인 응답에 세부표(지사/총판/자사몰 등 수백 행)를 싣지 않고, 돋보기 클릭 시에만 ?action=detail&sheet=<시트명> 으로 해당 세부표 1개를 받아 렌더. → 메인 doGet 응답이 크게 가벼워져 새로고침 속도 개선. 받은 세부표는 세션 캐시(DETAIL_CACHE)+카드 객체에 저장해 재클릭 시 즉시. 로딩 중 표시·3회 재시도·다른 카드 열림 시 이전 응답 폐기 처리. openKpiDetail→async, 표 렌더는 renderKpiDetailBody로 분리. 세부보기 버튼 노출은 detailSheet 유무로 판정(구 응답의 k.detail 배열도 호환). Code.gs v3.19와 함께 배포 필요.
@@ -1774,6 +1777,11 @@ function renderTrendChart() {
   const refMax = 1.08 * (trendState.p === "연누적"
     ? Math.max((cum(dv(r26)).slice(-1)[0]) || 0, (cum(dv(r25)).slice(-1)[0]) || 0)
     : Math.max(0, ...dv(r26), ...dv(r25)));
+  // Y축 눈금 구간: 총매출=5억 / 출고수량=5만(=50천). 기본 구간으로 눈금이 너무 많아지면(연누적 등) 그 배수로 자동 확장(≤15개 유지). 최댓값은 구간 배수로 정렬.
+  const baseStep = (trendState.metric === "출고수량") ? 50 : 5;
+  let yStep = baseStep;
+  while (refMax / yStep > 15) yStep += baseStep;
+  const yMax = Math.max(yStep, Math.ceil(refMax / yStep) * yStep);
   if (trendChart) { trendChart.destroy(); trendChart = null; }
   const opts = t => ({ responsive: true, maintainAspectRatio: false, layout: { padding: { top: 14 } },
     plugins: { title: { display: true, text: `${t} · ${trendState.g}${(cfg.hasChannel && trendState.ch !== "전체") ? " · " + trendState.ch : ""}`, color: "#243B53", font: { size: 13, weight: "600" } },
@@ -1782,7 +1790,7 @@ function renderTrendChart() {
         mode: trendState.p === "연누적" ? "index" : "nearest",   // 연누적(라인): 같은 월의 26·25를 한 툴팁에 모두 표시
         intersect: trendState.p === "연누적" ? false : true,
         callbacks: { label: c => `${c.dataset.label} ${f1(c.parsed.y)}${unit}` } } },
-    scales: { x: { grid: { display: false } }, y: { beginAtZero: true, suggestedMax: refMax, ticks: { callback: v => v + unit }, grid: { color: "#EDF2F7" } } } });
+    scales: { x: { grid: { display: false } }, y: { beginAtZero: true, max: yMax, ticks: { stepSize: yStep, callback: v => v + unit }, grid: { color: "#EDF2F7" } } } });
   if (trendState.p === "연누적") {
     trendChart = new Chart(ctx, { type: "line", data: { labels: cfg.data.months, datasets: [
       { label: "2026 누적", data: cum(dv(y26)), borderColor: "#1F5E92", backgroundColor: "#1F5E92", borderWidth: 2.5, tension: .25, pointRadius: 3 },
