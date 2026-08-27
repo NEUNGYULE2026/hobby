@@ -25,6 +25,7 @@
  * v3.35 — KPI 세부보기 지연사유 돋보기(.delay-i)+펼침 행(.delay-row·.delay-box) 아코디언
  * v3.36 — 추세 차트 영역(.trend-cw) 높이 280→360px(Y축 구간 세분화 시 볼륨감)
  * v3.37 — 추세 차트 영역(.trend-cw) 높이 360→420px(Y축 2.5억/2.5만 구간 볼륨감)
+ * v3.38 — (공통) 팝업 빈 행 기준 '영역' 분할: .reason-common-region 간 간격+구분선, 영역 내부 블록 간격
  * v3.16 — KPI 카드 flex 세로 구조(같은 줄 높이 통일 + 하단 배지/버튼 정렬)
  * v3.17 — 텍스트형 KPI 달성율 컴팩트 인라인 미니바(.kpi-trate)
  * v3.18 — 달성율 미니바 여백 축소(실적 바로 아래로 올림)
@@ -1069,10 +1070,10 @@ a { color: inherit; text-decoration: none; }
 .reason-common-cap { font-weight: 700; margin-bottom: 6px; }             /* 표 바로 위 제목(캡션) */
 .reason-common-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }  /* 표가 넓으면 깔끔히 가로 스크롤 */
 .reason-modal-box.has-common { width: min(880px, calc(100vw - 40px)); }         /* (공통) 표 있을 때 폭 확장(잘림 방지) */
-.reason-common > .reason-common-table + .reason-common-table,
-.reason-common > .reason-common-table + .reason-common-text,
-.reason-common > .reason-common-text + .reason-common-table,
-.reason-common > .reason-common-text + .reason-common-text { margin-top: 12px; }
+/* 영역(빈 행으로 분리) 간 간격 — 서로 다른 구조의 표/텍스트를 완전히 별개 블록으로 분리 */
+.reason-common-region + .reason-common-region { margin-top: 22px; padding-top: 20px; border-top: 1px solid #e3e8ef; }
+/* 같은 영역 내부의 텍스트↔표 블록 간 간격(작게) */
+.reason-common-region > * + * { margin-top: 10px; }
 @media (max-width: 600px) { .reason-modal-box { width: calc(100vw - 24px); } }
 
 

@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.75
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.76
+ *
+ * v3.76 변경
+ *  - (공통) 팝업(월마감 예상매출 합계 돋보기 등) 렌더 구조 개선: buildCommonContent를 '빈 행 기준 영역 분할'로 변경. 빈 행(1개 이상)을 완전 별개 영역 경계로 삼아, 서로 구조가 다른 표 2개 이상이 한 화면에 와도 각 영역이 독립 열 구조로 렌더(섞임/깨짐 방지). 영역 내부에서만 텍스트↔표를 세분(표 바로 앞 텍스트=캡션). 영역 간에는 간격+구분선(css v3.38: .reason-common-region). 텍스트와 표가 빈 줄 없이 붙어 있으면 같은 영역. (Code.gs readCommonGrid는 내부 빈 행 보존 — 변경 없음)
  *
  * v3.75 변경
  *  - [버그수정] Y축 세분 구간(2.5억/2.5만)이 화면에 반영되지 않던 문제. Chart.js 기본 ticks.maxTicksLimit(11) 때문에 눈금 22개가 자동 솎아져 ≈5억처럼 보였음 → maxTicksLimit을 구간 수(yMax/yStep+2)로 상향해 지정 구간 그대로 표시.
@@ -872,16 +875,15 @@ function buildCommonContent(grid) {
   const numRe = v => { const s = nz(v).replace(/[\s원]/g, ''); return s !== '' && /^-?[\d,]+(\.\d+)?%?$/.test(s); };
   const filled = r => r.reduce((n, c) => n + (nz(c) !== '' ? 1 : 0), 0);
 
-  // 1) 행 타입(표=여러 칸 / 텍스트=한 칸) 런으로 분할. 빈 행은 경계. → 제목(한 칸)과 표(여러 칸)가 빈 줄 없이 붙어 있어도 자동 분리.
-  const segs = [];
-  let cur = null;
+  // 1) '빈 행'을 경계로 완전 별개의 '영역'으로 분할(연속 빈 행은 하나의 경계). 영역 안의 텍스트·표는 같은 영역으로 묶고, 영역끼리는 서로 독립(열 구조·간격 분리).
+  const regions = [];
+  let curRegion = null;
   grid.forEach(r => {
-    if (filled(r) === 0) { cur = null; return; }
-    const t = filled(r) >= 2 ? 'table' : 'text';
-    if (!cur || cur.type !== t) { cur = { type: t, rows: [] }; segs.push(cur); }
-    cur.rows.push(r);
+    if (filled(r) === 0) { curRegion = null; return; }   // 빈 행 = 영역 경계
+    if (!curRegion) { curRegion = []; regions.push(curRegion); }
+    curRegion.push(r);
   });
-  if (!segs.length) return '';
+  if (!regions.length) return '';
 
   // 블록별 빈 열 제거
   const trimCols = rows => {
@@ -911,13 +913,25 @@ function buildCommonContent(grid) {
     return `<div class="reason-common-text${isCaption ? ' reason-common-cap' : ''}">${escape(lines.join('\n'))}</div>`;
   };
 
-  // 표 바로 앞의 텍스트(한 칸) 런은 표 제목(캡션)으로 강조
-  const parts = segs.map((s, i) => {
-    if (s.type === 'table') return renderTable(s.rows);
-    const isCap = segs[i + 1] && segs[i + 1].type === 'table';
-    return renderText(s.rows, isCap);
-  });
-  return `<div class="reason-common"><div class="reason-common-title"><strong>(공통)</strong></div>${parts.join('')}</div>`;
+  // 2) 각 영역을 독립 렌더. 영역 내부에서만 행 타입(표=여러 칸 / 텍스트=한 칸) 런으로 세분 → 표 바로 앞 텍스트는 캡션으로 강조(빈 줄 없이 붙어 있어도 분리). 영역 간에는 CSS로 간격.
+  const renderRegion = rows => {
+    const runs = [];
+    let cur = null;
+    rows.forEach(r => {
+      const t = filled(r) >= 2 ? 'table' : 'text';
+      if (!cur || cur.type !== t) { cur = { type: t, rows: [] }; runs.push(cur); }
+      cur.rows.push(r);
+    });
+    const parts = runs.map((s, i) => {
+      if (s.type === 'table') return renderTable(s.rows);
+      const isCap = runs[i + 1] && runs[i + 1].type === 'table';
+      return renderText(s.rows, isCap);
+    }).filter(Boolean);
+    if (!parts.length) return '';
+    return `<div class="reason-common-region">${parts.join('')}</div>`;
+  };
+  const regionsHTML = regions.map(renderRegion).filter(Boolean).join('');
+  return `<div class="reason-common"><div class="reason-common-title"><strong>(공통)</strong></div>${regionsHTML}</div>`;
 }
 
 // 증감사유 레이어창 — 비고 내용을 표 본문과 동일한 폰트 크기로 표시. extraHTML(공통 표)은 텍스트 하단에 부착.
