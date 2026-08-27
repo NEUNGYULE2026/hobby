@@ -27,6 +27,7 @@
  * v3.37 — 추세 차트 영역(.trend-cw) 높이 360→420px(Y축 2.5억/2.5만 구간 볼륨감)
  * v3.38 — (공통) 팝업 빈 행 기준 '영역' 분할: .reason-common-region 간 간격+구분선, 영역 내부 블록 간격
  * v3.39 — (공통) 표 병합 셀(.mg) 상하좌우 중앙정렬(시트 rowspan/colspan 반영)
+ * v3.40 — (공통) 표: 헤더 전부 중앙정렬, 제목=표 <caption>(중앙)·단위표기 표 우측끝 고정, 합계행 라벨 중앙정렬
  * v3.16 — KPI 카드 flex 세로 구조(같은 줄 높이 통일 + 하단 배지/버튼 정렬)
  * v3.17 — 텍스트형 KPI 달성율 컴팩트 인라인 미니바(.kpi-trate)
  * v3.18 — 달성율 미니바 여백 축소(실적 바로 아래로 올림)
@@ -1064,12 +1065,18 @@ a { color: inherit; text-decoration: none; }
 .reason-common-title { margin-bottom: 7px; font-size: 13px; }
 .reason-common-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .reason-common-table th, .reason-common-table td { border: 1px solid #d8dee6; padding: 5px 9px; text-align: left; white-space: nowrap; }
-.reason-common-table th { background: #f1f4f8; font-weight: 700; color: var(--text-main); }
-.reason-common-table td.num, .reason-common-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.reason-common-table th { background: #f1f4f8; font-weight: 700; color: var(--text-main); text-align: center; vertical-align: middle; }  /* 헤더(타이틀) 영역 모두 중앙 정렬 */
+.reason-common-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.reason-common-table th.num { font-variant-numeric: tabular-nums; }      /* 헤더는 숫자여도 중앙 유지 */
 .reason-common-table td.mg, .reason-common-table th.mg { text-align: center; vertical-align: middle; }  /* 병합 셀: 상하좌우 중앙 정렬 */
 .reason-common-table tbody tr:last-child { font-weight: 700; background: #f7f9fc; }
+.reason-common-table tbody tr:last-child td:not(.num) { text-align: center; }  /* 합계 등 마지막 행의 텍스트(라벨) 중앙 정렬 */
 .reason-common-text { white-space: pre-wrap; word-break: keep-all; font-size: 13px; line-height: 1.6; color: var(--text-main); }
-.reason-common-cap { font-weight: 700; margin-bottom: 6px; }             /* 표 바로 위 제목(캡션) */
+/* 표 캡션(제목 문구): 표 폭에 맞춰 제목은 중앙, (단위:억원) 등 부가표기는 표 우측 끝 고정 */
+.reason-common-table caption.reason-common-cap { caption-side: top; text-align: center; font-weight: 700; font-size: 13px; color: var(--text-main); padding: 0 2px 6px; }
+.reason-common-cap .cap-line { display: block; position: relative; }
+.reason-common-cap .cap-unit { position: absolute; right: 0; top: 0; font-weight: 400; font-size: 12px; color: var(--text-soft, #6b7684); }
+.reason-common-text.reason-common-cap { font-weight: 700; margin-bottom: 6px; }   /* 표 없이 단독 캡션(구형 경로) */
 .reason-common-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }  /* 표가 넓으면 깔끔히 가로 스크롤 */
 .reason-modal-box.has-common { width: min(880px, calc(100vw - 40px)); }         /* (공통) 표 있을 때 폭 확장(잘림 방지) */
 /* 영역(빈 행으로 분리) 간 간격 — 서로 다른 구조의 표/텍스트를 완전히 별개 블록으로 분리 */

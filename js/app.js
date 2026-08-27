@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.77
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.78
+ *
+ * v3.78 변경
+ *  - (공통) 표 정렬 다듬기: ① 헤더(타이틀) 셀 전부 중앙정렬(css v3.40) ② 제목 문구('* 마감 예상' 등)를 표 <caption>으로 렌더해 표 폭에 맞추고, 제목은 중앙·'(단위:억원)' 등 부가표기는 표 우측 끝 고정(cap-title/cap-unit) ③ 합계 등 마지막 행의 텍스트(라벨) 중앙정렬. buildCommonContent: 표 앞 텍스트 런을 그 표의 캡션으로 연결(renderTable 2번째 인자 capRows).
  *
  * v3.77 변경
  *  - (공통) 팝업 표에 시트의 행/열 병합(rowspan/colspan) 그대로 적용 + 병합 셀 상하좌우 중앙정렬(.mg, css v3.39). buildCommonContent가 셀 객체 그리드({v,rs,cs}|null=병합피복) 소비(구형 문자열 배열도 호환). 병합 피복행은 영역 경계로 오인하지 않음(세로병합 유지). 다단 헤더 자동 감지(선두의 숫자 없는 연속 행=헤더). '마감 예상' 등 '*'로 시작하는 문구 행은 표가 아닌 '텍스트(캡션)'로 렌더(붙어 있는 표의 제목). 영역별 열 정리는 병합 확장 기반(colspan 재계산). ※ Code.gs v3.20(readCommonGrid 병합 반영)과 함께 배포.
@@ -920,7 +923,18 @@ function buildCommonContent(grid) {
     });
   };
 
-  const renderTable = rows => {
+  // 표 캡션(제목 문구) — 표 <caption>으로 렌더(표 폭에 정확히 맞춤). 첫 칸=제목(중앙), 나머지 칸(예: (단위:억원))=표 우측 끝 고정.
+  const captionHTML = capRows => {
+    if (!capRows || !capRows.length) return '';
+    const line = r => {
+      const cs = nonEmpty(r); if (!cs.length) return '';
+      const left = cs[0].v; const right = cs.slice(1).map(c => c.v).join('  ');
+      return `<span class="cap-line"><span class="cap-title">${escape(left)}</span>${right ? `<span class="cap-unit">${escape(right)}</span>` : ''}</span>`;
+    };
+    const inner = capRows.map(line).filter(Boolean).join('');
+    return inner ? `<caption class="reason-common-cap">${inner}</caption>` : '';
+  };
+  const renderTable = (rows, capRows) => {
     // 헤더 단수 = 선두의 '숫자 없는' 연속 행(다단 헤더 대응). 최소 1행.
     let headerCount = 0;
     for (const r of rows) { const cs = nonEmpty(r); if (cs.length && cs.every(c => !numRe(c.v))) headerCount++; else break; }
@@ -934,7 +948,7 @@ function buildCommonContent(grid) {
     }).join('') + '</tr>';
     const head = rows.slice(0, headerCount).map(r => tr(r, 'th')).join('');
     const body = rows.slice(headerCount).map(r => tr(r, 'td')).join('');
-    return `<div class="reason-common-scroll"><table class="reason-common-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+    return `<div class="reason-common-scroll"><table class="reason-common-table">${captionHTML(capRows)}<thead>${head}</thead><tbody>${body}</tbody></table></div>`;
   };
   const renderText = (rows, isCaption) => {
     const lines = rows.map(r => r.filter(c => c && c.v !== '').map(c => c.v).join('  ')).filter(l => l !== '');
@@ -942,7 +956,7 @@ function buildCommonContent(grid) {
     return `<div class="reason-common-text${isCaption ? ' reason-common-cap' : ''}">${escape(lines.join('\n'))}</div>`;
   };
 
-  // 2) 각 영역 독립 렌더: 영역 열 정리 → 행 타입(텍스트/표) 런 분할 → 표 앞 텍스트=캡션
+  // 2) 각 영역 독립 렌더: 영역 열 정리 → 행 타입(텍스트/표) 런 분할 → 표 바로 앞 텍스트는 그 표의 캡션(<caption>)으로, 나머지는 텍스트 블록
   const renderRegion = rowsRaw => {
     const rows = trimRegionCols(rowsRaw);
     const runs = [];
@@ -952,11 +966,13 @@ function buildCommonContent(grid) {
       if (!cur || cur.type !== t) { cur = { type: t, rows: [] }; runs.push(cur); }
       cur.rows.push(r);
     });
-    const parts = runs.map((s, i) => {
-      if (s.type === 'table') return renderTable(s.rows);
-      const isCap = runs[i + 1] && runs[i + 1].type === 'table';
-      return renderText(s.rows, isCap);
-    }).filter(Boolean);
+    const parts = [];
+    for (let i = 0; i < runs.length; i++) {
+      const s = runs[i];
+      if (s.type === 'table') { parts.push(renderTable(s.rows, s._cap)); continue; }
+      if (runs[i + 1] && runs[i + 1].type === 'table') { runs[i + 1]._cap = s.rows; continue; }  // 표 앞 텍스트 → 표 캡션
+      const h = renderText(s.rows, false); if (h) parts.push(h);
+    }
     if (!parts.length) return '';
     return `<div class="reason-common-region">${parts.join('')}</div>`;
   };
