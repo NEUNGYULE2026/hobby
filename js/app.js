@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.76
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.77
+ *
+ * v3.77 변경
+ *  - (공통) 팝업 표에 시트의 행/열 병합(rowspan/colspan) 그대로 적용 + 병합 셀 상하좌우 중앙정렬(.mg, css v3.39). buildCommonContent가 셀 객체 그리드({v,rs,cs}|null=병합피복) 소비(구형 문자열 배열도 호환). 병합 피복행은 영역 경계로 오인하지 않음(세로병합 유지). 다단 헤더 자동 감지(선두의 숫자 없는 연속 행=헤더). '마감 예상' 등 '*'로 시작하는 문구 행은 표가 아닌 '텍스트(캡션)'로 렌더(붙어 있는 표의 제목). 영역별 열 정리는 병합 확장 기반(colspan 재계산). ※ Code.gs v3.20(readCommonGrid 병합 반영)과 함께 배포.
  *
  * v3.76 변경
  *  - (공통) 팝업(월마감 예상매출 합계 돋보기 등) 렌더 구조 개선: buildCommonContent를 '빈 행 기준 영역 분할'로 변경. 빈 행(1개 이상)을 완전 별개 영역 경계로 삼아, 서로 구조가 다른 표 2개 이상이 한 화면에 와도 각 영역이 독립 열 구조로 렌더(섞임/깨짐 방지). 영역 내부에서만 텍스트↔표를 세분(표 바로 앞 텍스트=캡션). 영역 간에는 간격+구분선(css v3.38: .reason-common-region). 텍스트와 표가 빈 줄 없이 붙어 있으면 같은 영역. (Code.gs readCommonGrid는 내부 빈 행 보존 — 변경 없음)
@@ -868,57 +871,84 @@ function renderMonthlySales(ms) {
   bindTrendExpander(el);
 }
 
-// (공통) — 합계행 비고에 적힌 시트명의 내용을 렌더. 빈 행으로 블록을 나눠 여러 칸=표, 한 칸=텍스트로 자동 구분(시트 순서 유지).
+// (공통) — 합계행 비고 시트명 내용을 렌더. 셀 객체 그리드({v,rs,cs}|null=병합피복) 소비(구형 문자열 배열도 호환).
+//  · 빈 행 = 완전 별개 '영역' 경계(병합 피복행은 경계 아님)
+//  · 행이 '*'로 시작하거나 채워진 칸이 1개면 '텍스트(문구/캡션)' — 표로 만들지 않음(표 바로 앞이면 캡션)
+//  · 표는 시트의 행/열 병합(rowspan/colspan)을 그대로 적용, 병합 셀은 상하좌우 중앙정렬(.mg)
 function buildCommonContent(grid) {
   if (!grid || !grid.length) return '';
-  const nz = s => String(s == null ? "" : s).trim();  // 전역 스코프용 로컬 헬퍼(renderMonthlySales의 nz는 지역 변수)
+  const nz = s => String(s == null ? "" : s).trim();
+  // 셀 정규화: null=병합 피복, 문자열=구형, 객체={v,rs,cs}
+  const norm = c => (c == null ? null : (typeof c === 'object' ? { v: nz(c.v), rs: c.rs || 1, cs: c.cs || 1 } : { v: nz(c), rs: 1, cs: 1 }));
+  const G = grid.map(r => r.map(norm));
   const numRe = v => { const s = nz(v).replace(/[\s원]/g, ''); return s !== '' && /^-?[\d,]+(\.\d+)?%?$/.test(s); };
-  const filled = r => r.reduce((n, c) => n + (nz(c) !== '' ? 1 : 0), 0);
+  const nonEmpty = row => row.filter(c => c && c.v !== '');
+  const filled = row => nonEmpty(row).length;
+  const startsStar = row => { const a = nonEmpty(row); return a.length > 0 && a[0].v.charAt(0) === '*'; };
+  const hasCover = row => row.some(c => c === null);
+  const blankRow = row => !hasCover(row) && row.every(c => !c || c.v === '');   // 영역 경계(세로병합 피복행 제외)
 
-  // 1) '빈 행'을 경계로 완전 별개의 '영역'으로 분할(연속 빈 행은 하나의 경계). 영역 안의 텍스트·표는 같은 영역으로 묶고, 영역끼리는 서로 독립(열 구조·간격 분리).
+  // 1) 빈 행 기준 영역 분할
   const regions = [];
   let curRegion = null;
-  grid.forEach(r => {
-    if (filled(r) === 0) { curRegion = null; return; }   // 빈 행 = 영역 경계
+  G.forEach(r => {
+    if (blankRow(r)) { curRegion = null; return; }
     if (!curRegion) { curRegion = []; regions.push(curRegion); }
     curRegion.push(r);
   });
   if (!regions.length) return '';
 
-  // 블록별 빈 열 제거
-  const trimCols = rows => {
+  // 영역별 사용 열 계산(병합 확장) → 빈 열 제거 + colspan 재계산
+  const trimRegionCols = rows => {
     const ncol = rows.reduce((m, r) => Math.max(m, r.length), 0);
-    const keep = [];
-    for (let c = 0; c < ncol; c++) if (rows.some(r => nz(r[c]) !== '')) keep.push(c);
-    return rows.map(r => keep.map(c => nz(r[c])));
+    const used = new Array(ncol).fill(false);
+    rows.forEach(r => r.forEach((c, j) => {
+      if (c && c.v !== '') { const cs = Math.min(c.cs, ncol - j); for (let k = 0; k < cs; k++) used[j + k] = true; }
+    }));
+    const keep = []; for (let j = 0; j < ncol; j++) if (used[j]) keep.push(j);
+    const keepSet = new Set(keep);
+    return rows.map(r => {
+      const out = [];
+      for (let j = 0; j < r.length; j++) {
+        if (!keepSet.has(j)) continue;
+        const c = r[j];
+        if (c === null) { out.push(null); continue; }
+        let cs = 0; for (let k = j; k < j + c.cs; k++) if (keepSet.has(k)) cs++;
+        out.push({ v: c.v, rs: c.rs, cs: Math.max(1, cs) });
+      }
+      return out;
+    });
   };
 
-  const renderTable = rowsRaw => {
-    const rows = trimCols(rowsRaw);
-    const ncol = rows[0].length;
-    const numCol = [];
-    for (let c = 0; c < ncol; c++) {
-      let f = 0, n = 0;
-      for (let i = 1; i < rows.length; i++) { const v = nz(rows[i][c]); if (v) { f++; if (numRe(v)) n++; } }
-      numCol[c] = f > 0 ? n * 2 >= f : numRe(rows[0][c]);   // 데이터행 없으면 헤더값 기준
-    }
-    const cell = (v, c, tag) => `<${tag}${numCol[c] ? ' class="num"' : ''}>${escape(nz(v))}</${tag}>`;
-    const head = '<tr>' + rows[0].map((v, c) => cell(v, c, 'th')).join('') + '</tr>';
-    const body = rows.slice(1).map(r => '<tr>' + Array.from({ length: ncol }, (_, c) => cell(r[c], c, 'td')).join('') + '</tr>').join('');
+  const renderTable = rows => {
+    // 헤더 단수 = 선두의 '숫자 없는' 연속 행(다단 헤더 대응). 최소 1행.
+    let headerCount = 0;
+    for (const r of rows) { const cs = nonEmpty(r); if (cs.length && cs.every(c => !numRe(c.v))) headerCount++; else break; }
+    if (headerCount === 0) headerCount = 1;
+    const tr = (r, tag) => '<tr>' + r.map(c => {
+      if (c === null) return '';                      // 병합 피복 → 스킵(HTML rowspan/colspan로 표현)
+      const merged = c.rs > 1 || c.cs > 1;
+      const cls = merged ? ' class="mg"' : (numRe(c.v) ? ' class="num"' : '');
+      const span = (c.rs > 1 ? ` rowspan="${c.rs}"` : '') + (c.cs > 1 ? ` colspan="${c.cs}"` : '');
+      return `<${tag}${cls}${span}>${escape(c.v)}</${tag}>`;
+    }).join('') + '</tr>';
+    const head = rows.slice(0, headerCount).map(r => tr(r, 'th')).join('');
+    const body = rows.slice(headerCount).map(r => tr(r, 'td')).join('');
     return `<div class="reason-common-scroll"><table class="reason-common-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
   };
-  const renderText = (rowsRaw, isCaption) => {
-    const lines = rowsRaw.map(r => r.map(c => nz(c)).filter(x => x !== '').join('  ')).filter(l => l !== '');
+  const renderText = (rows, isCaption) => {
+    const lines = rows.map(r => r.filter(c => c && c.v !== '').map(c => c.v).join('  ')).filter(l => l !== '');
     if (!lines.length) return '';
     return `<div class="reason-common-text${isCaption ? ' reason-common-cap' : ''}">${escape(lines.join('\n'))}</div>`;
   };
 
-  // 2) 각 영역을 독립 렌더. 영역 내부에서만 행 타입(표=여러 칸 / 텍스트=한 칸) 런으로 세분 → 표 바로 앞 텍스트는 캡션으로 강조(빈 줄 없이 붙어 있어도 분리). 영역 간에는 CSS로 간격.
-  const renderRegion = rows => {
+  // 2) 각 영역 독립 렌더: 영역 열 정리 → 행 타입(텍스트/표) 런 분할 → 표 앞 텍스트=캡션
+  const renderRegion = rowsRaw => {
+    const rows = trimRegionCols(rowsRaw);
     const runs = [];
     let cur = null;
     rows.forEach(r => {
-      const t = filled(r) >= 2 ? 'table' : 'text';
+      const t = (filled(r) <= 1 || startsStar(r)) ? 'text' : 'table';
       if (!cur || cur.type !== t) { cur = { type: t, rows: [] }; runs.push(cur); }
       cur.rows.push(r);
     });
