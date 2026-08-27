@@ -28,6 +28,7 @@
  * v3.38 — (공통) 팝업 빈 행 기준 '영역' 분할: .reason-common-region 간 간격+구분선, 영역 내부 블록 간격
  * v3.39 — (공통) 표 병합 셀(.mg) 상하좌우 중앙정렬(시트 rowspan/colspan 반영)
  * v3.40 — (공통) 표: 헤더 전부 중앙정렬, 제목=표 <caption>(중앙)·단위표기 표 우측끝 고정, 합계행 라벨 중앙정렬
+ * v3.41 — (공통) 제목 캡션은 영역 설명 타이틀이므로 좌측 정렬(단위표기 우측끝 고정은 유지)
  * v3.16 — KPI 카드 flex 세로 구조(같은 줄 높이 통일 + 하단 배지/버튼 정렬)
  * v3.17 — 텍스트형 KPI 달성율 컴팩트 인라인 미니바(.kpi-trate)
  * v3.18 — 달성율 미니바 여백 축소(실적 바로 아래로 올림)
@@ -1073,7 +1074,7 @@ a { color: inherit; text-decoration: none; }
 .reason-common-table tbody tr:last-child td:not(.num) { text-align: center; }  /* 합계 등 마지막 행의 텍스트(라벨) 중앙 정렬 */
 .reason-common-text { white-space: pre-wrap; word-break: keep-all; font-size: 13px; line-height: 1.6; color: var(--text-main); }
 /* 표 캡션(제목 문구): 표 폭에 맞춰 제목은 중앙, (단위:억원) 등 부가표기는 표 우측 끝 고정 */
-.reason-common-table caption.reason-common-cap { caption-side: top; text-align: center; font-weight: 700; font-size: 13px; color: var(--text-main); padding: 0 2px 6px; }
+.reason-common-table caption.reason-common-cap { caption-side: top; text-align: left; font-weight: 700; font-size: 13px; color: var(--text-main); padding: 0 2px 6px; }  /* 영역 설명 타이틀은 좌측 정렬 */
 .reason-common-cap .cap-line { display: block; position: relative; }
 .reason-common-cap .cap-unit { position: absolute; right: 0; top: 0; font-weight: 400; font-size: 12px; color: var(--text-soft, #6b7684); }
 .reason-common-text.reason-common-cap { font-weight: 700; margin-bottom: 6px; }   /* 표 없이 단독 캡션(구형 경로) */
