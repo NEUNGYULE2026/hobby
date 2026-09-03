@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.78
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.79
+ *
+ * v3.79 변경
+ *  - (8월) 마감 실적 버튼 신설: 월별 매출현황 표 라벨 행 비고(K)열에 시트명이 있으면(ms.closingGrid) 표 밖 우측 상단에 '(8월) 마감 실적' 버튼 노출(.sales-toolbar/.closing-btn, css v3.42). 클릭 시 openReasonModal(제목 '(8월) 마감 실적')로 그 시트 내용을 (공통) 팝업과 동일 규칙(buildCommonContent)으로 표시. 시트명 없거나 불일치면 버튼 미노출(closingGrid=null). openReasonModal에 titleOverride 인자 추가. ※ Code.gs v3.21과 함께 배포.
  *
  * v3.78 변경
  *  - (공통) 표 정렬 다듬기: ① 헤더(타이틀) 셀 전부 중앙정렬(css v3.40) ② 제목 문구('* 마감 예상' 등)를 표 <caption>으로 렌더해 표 폭에 맞추고, 제목은 중앙·'(단위:억원)' 등 부가표기는 표 우측 끝 고정(cap-title/cap-unit) ③ 합계 등 마지막 행의 텍스트(라벨) 중앙정렬. buildCommonContent: 표 앞 텍스트 런을 그 표의 캡션으로 연결(renderTable 2번째 인자 capRows).
@@ -764,6 +767,7 @@ function renderMonthlySales(ms) {
   if (nz(_ft0.part2Remark)) _fLines.push('(ELT-총판)\n' + nz(_ft0.part2Remark));
   const forecastReason = _fLines.join('\n\n'); // 지사·총판 사이에 빈 줄 1개 확보
   const commonTableHTML = buildCommonContent(_ft0.commonGrid); // (공통) — 합계행 비고 시트명 내용을 표/텍스트 블록으로 렌더
+  const closingHTML = buildCommonContent(ms.closingGrid);       // (8월) 마감 실적 — 표 라벨 행 비고(K)열 시트명 내용. 표 밖 버튼으로 노출(시트명 없거나 불일치면 빈 문자열→버튼 미노출)
   const showReason = rows.some(r => nz(r.remark)) || !!forecastReason || !!commonTableHTML;
   const REASON_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>`;
   function reasonCell(text, withCommon) {
@@ -857,8 +861,14 @@ function renderMonthlySales(ms) {
       </table>`;
   }
 
+  // (8월) 마감 실적 버튼 — 표 밖(우측). 표 라벨 행 비고(K)열에 시트명이 있을 때만 노출(closingHTML 존재 시).
+  const closingBar = closingHTML
+    ? `<div class="sales-toolbar"><button class="closing-btn" type="button">(8월) 마감 실적</button></div>`
+    : "";
+
   el.innerHTML = `
     <div class="sales-block">
+      ${closingBar}
       ${tableHtml}
       ${ms.note ? `<div class="sales-note">${escape(ms.note)}</div>` : ""}
       ${buildTrendExpander()}
@@ -871,6 +881,8 @@ function renderMonthlySales(ms) {
       btn.hasAttribute('data-common') ? commonTableHTML : ''
     ));
   });
+  const closingBtn = el.querySelector('.closing-btn');
+  if (closingBtn) closingBtn.addEventListener('click', () => openReasonModal('', closingHTML, '(8월) 마감 실적'));
   bindTrendExpander(el);
 }
 
@@ -981,7 +993,7 @@ function buildCommonContent(grid) {
 }
 
 // 증감사유 레이어창 — 비고 내용을 표 본문과 동일한 폰트 크기로 표시. extraHTML(공통 표)은 텍스트 하단에 부착.
-function openReasonModal(text, extraHTML) {
+function openReasonModal(text, extraHTML, titleOverride) {
   let modal = document.getElementById('reason-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -1003,6 +1015,8 @@ function openReasonModal(text, extraHTML) {
     modal.querySelector('.reason-modal-close').addEventListener('click', close);
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   }
+  // 제목: 기본 '(증감)주요내역', 호출 시 titleOverride로 교체(예 '(8월) 마감 실적')
+  modal.querySelector('.reason-modal-title').textContent = titleOverride || '(증감)주요내역';
   // 텍스트: HTML 이스케이프 후 (지사)/(총판)/(공통) 접두어만 볼드(개행은 white-space:pre-wrap가 렌더). extraHTML(공통 표)은 그 아래에.
   const boldText = escape(text || "").replace(/\((중고등-지사|ELT-총판|공통)\)/g, '<strong>($1)</strong>');
   modal.querySelector('.reason-modal-body').innerHTML =
