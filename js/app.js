@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.79
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.80
+ *
+ * v3.80 변경
+ *  - (공통)/마감실적 팝업 표 다듬기(buildCommonContent): ① 영역 내 '빈(병합 포함) 스페이서 행' 제거 → 위·아래 표가 한 테이블로 이어져 셀 간격 일치(예: 매출 표와 (당월)반품 행이 한 표로, 반품이 일반 데이터행). ② 값 없는 셀은 테두리·배경 투명(css v3.43, td:empty) → 반품 행의 빈 달성율/신장율 등 안 보이게. ③ '합계'류 행(합계/소계/총계) 전부 볼드+배경(.sum-row) — 기존 '마지막 행만' 규칙 폐기 → 주요사업상세 중고등/B&G 합계도 OUP 합계처럼 강조, 합계 아닌 마지막 행(반품 등)은 강조 안 함. (세로병합 커버 행은 스페이서 제거에서 보존)
  *
  * v3.79 변경
  *  - (8월) 마감 실적 버튼 신설: 월별 매출현황 표 라벨 행 비고(K)열에 시트명이 있으면(ms.closingGrid) 표 밖 우측 상단에 '(8월) 마감 실적' 버튼 노출(.sales-toolbar/.closing-btn, css v3.42). 클릭 시 openReasonModal(제목 '(8월) 마감 실적')로 그 시트 내용을 (공통) 팝업과 동일 규칙(buildCommonContent)으로 표시. 시트명 없거나 불일치면 버튼 미노출(closingGrid=null). openReasonModal에 titleOverride 인자 추가. ※ Code.gs v3.21과 함께 배포.
@@ -951,15 +954,16 @@ function buildCommonContent(grid) {
     let headerCount = 0;
     for (const r of rows) { const cs = nonEmpty(r); if (cs.length && cs.every(c => !numRe(c.v))) headerCount++; else break; }
     if (headerCount === 0) headerCount = 1;
-    const tr = (r, tag) => '<tr>' + r.map(c => {
+    const isSumRow = r => { const a = nonEmpty(r); return a.length > 0 && /합계|소계|총계/.test(a[0].v); };  // '합계'류 행 → 볼드+배경(.sum-row)
+    const tr = (r, tag, rowCls) => `<tr${rowCls ? ` class="${rowCls}"` : ''}>` + r.map(c => {
       if (c === null) return '';                      // 병합 피복 → 스킵(HTML rowspan/colspan로 표현)
       const merged = c.rs > 1 || c.cs > 1;
       const cls = merged ? ' class="mg"' : (numRe(c.v) ? ' class="num"' : '');
       const span = (c.rs > 1 ? ` rowspan="${c.rs}"` : '') + (c.cs > 1 ? ` colspan="${c.cs}"` : '');
       return `<${tag}${cls}${span}>${escape(c.v)}</${tag}>`;
     }).join('') + '</tr>';
-    const head = rows.slice(0, headerCount).map(r => tr(r, 'th')).join('');
-    const body = rows.slice(headerCount).map(r => tr(r, 'td')).join('');
+    const head = rows.slice(0, headerCount).map(r => tr(r, 'th', '')).join('');
+    const body = rows.slice(headerCount).map(r => tr(r, 'td', isSumRow(r) ? 'sum-row' : '')).join('');
     return `<div class="reason-common-scroll"><table class="reason-common-table">${captionHTML(capRows)}<thead>${head}</thead><tbody>${body}</tbody></table></div>`;
   };
   const renderText = (rows, isCaption) => {
@@ -970,7 +974,10 @@ function buildCommonContent(grid) {
 
   // 2) 각 영역 독립 렌더: 영역 열 정리 → 행 타입(텍스트/표) 런 분할 → 표 바로 앞 텍스트는 그 표의 캡션(<caption>)으로, 나머지는 텍스트 블록
   const renderRegion = rowsRaw => {
-    const rows = trimRegionCols(rowsRaw);
+    let rows = trimRegionCols(rowsRaw);
+    // 빈(병합 포함) 스페이서 행 제거 — 값 없는 셀만 있고(빈 앵커/피복) 실제 값이 하나도 없는 행. 이러면 위·아래 표가 한 테이블로 이어져 셀 간격이 일치(예: 매출 표 아래 (당월)반품 행). ※ 전부 피복(null)뿐인 세로병합 커버 행은 보존.
+    rows = rows.filter(r => !(r.some(c => c !== null) && r.every(c => !c || c.v === '')));
+    if (!rows.length) return '';
     const runs = [];
     let cur = null;
     rows.forEach(r => {
