@@ -1,5 +1,9 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.80
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.81
+ *
+ * v3.81 변경
+ *  - 월별 매출현황 '개별 팀/파트' 행 비고 팝업 제목을 '[팀/파트명]'으로(reasonCell에 팀명 전달→data-team, 클릭 시 openReasonModal titleOverride='[팀명]'). 팀명=라벨 선두 괄호 그룹 추출(예 '(중고등영업팀) 참고서…'→중고등영업팀). 합계/월마감 예상매출 합계 행은 기존대로(제목 '(증감)주요내역', 지사/총판/(공통) 유지).
+ *  - '(8월) 마감 실적' 팝업은 '(공통)' 라벨 제외: buildCommonContent에 2번째 인자 noLabel 추가(true면 상단 '(공통)' 제목 생략). closingHTML만 true로 호출(합계행 시트10 팝업은 '(공통)' 유지).
  *
  * v3.80 변경
  *  - (공통)/마감실적 팝업 표 다듬기(buildCommonContent): ① 영역 내 '빈(병합 포함) 스페이서 행' 제거 → 위·아래 표가 한 테이블로 이어져 셀 간격 일치(예: 매출 표와 (당월)반품 행이 한 표로, 반품이 일반 데이터행). ② 값 없는 셀은 테두리·배경 투명(css v3.43, td:empty) → 반품 행의 빈 달성율/신장율 등 안 보이게. ③ '합계'류 행(합계/소계/총계) 전부 볼드+배경(.sum-row) — 기존 '마지막 행만' 규칙 폐기 → 주요사업상세 중고등/B&G 합계도 OUP 합계처럼 강조, 합계 아닌 마지막 행(반품 등)은 강조 안 함. (세로병합 커버 행은 스페이서 제거에서 보존)
@@ -770,15 +774,18 @@ function renderMonthlySales(ms) {
   if (nz(_ft0.part2Remark)) _fLines.push('(ELT-총판)\n' + nz(_ft0.part2Remark));
   const forecastReason = _fLines.join('\n\n'); // 지사·총판 사이에 빈 줄 1개 확보
   const commonTableHTML = buildCommonContent(_ft0.commonGrid); // (공통) — 합계행 비고 시트명 내용을 표/텍스트 블록으로 렌더
-  const closingHTML = buildCommonContent(ms.closingGrid);       // (8월) 마감 실적 — 표 라벨 행 비고(K)열 시트명 내용. 표 밖 버튼으로 노출(시트명 없거나 불일치면 빈 문자열→버튼 미노출)
+  const closingHTML = buildCommonContent(ms.closingGrid, true);  // (8월) 마감 실적 — 표 라벨 행 비고(K)열 시트명 내용. 표 밖 버튼으로 노출. 2번째 인자 true=‘(공통)’ 라벨 제외
   const showReason = rows.some(r => nz(r.remark)) || !!forecastReason || !!commonTableHTML;
   const REASON_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>`;
-  function reasonCell(text, withCommon) {
+  // 팀/파트명 추출: 라벨 '(중고등영업팀) 참고서…' → '중고등영업팀'(선두 괄호), 없으면 라벨 전체.
+  const teamName = label => { const m = String(label || "").match(/^\s*\(([^)]+)\)/); return m ? m[1].trim() : nz(label); };
+  function reasonCell(text, withCommon, teamLabel) {
     if (!showReason) return "";
     const t = nz(text);
     const common = withCommon && commonTableHTML;
     if (!t && !common) return `<td class="reason-cell"></td>`;
-    return `<td class="reason-cell"><button class="reason-btn" type="button" data-reason="${escape(t)}"${common ? ' data-common="1"' : ''} aria-label="비고 보기" title="비고">${REASON_ICON}</button></td>`;
+    const teamAttr = teamLabel ? ` data-team="${escape(teamLabel)}"` : "";  // 개별 팀/파트 행: 팝업 제목을 '[팀/파트명]'으로
+    return `<td class="reason-cell"><button class="reason-btn" type="button" data-reason="${escape(t)}"${common ? ' data-common="1"' : ''}${teamAttr} aria-label="비고 보기" title="비고">${REASON_ICON}</button></td>`;
   }
 
   const h = ms.headers || {};
@@ -792,7 +799,7 @@ function renderMonthlySales(ms) {
       + `<td class="num tgt gsep">${fmt2(o.targetShipped)}</td><td class="num tgt">${fmt2(o.targetReturns)}</td><td class="num tgt">${fmt2(o.targetNet)}</td>`
       + `<td class="num gsep">${fmt2(o.shipped)}</td><td class="num">${fmt2(o.returns)}</td><td class="num">${fmt2(o.net)}</td>`
       + `<td class="num gsep ${pcls}">${fmtPct(o.progress)}</td>`;
-    let body = rows.map(r => `<tr class="${r.type}">${rowCells(r, r.type === 'normal' ? pctCls(r.progress) : '')}${reasonCell(r.remark)}</tr>`).join("");
+    let body = rows.map(r => `<tr class="${r.type}">${rowCells(r, r.type === 'normal' ? pctCls(r.progress) : '')}${reasonCell(r.remark, false, r.type === 'total' ? '' : teamName(r.label))}</tr>`).join("");
     if (ms.forecastTotal) {
       const ft = ms.forecastTotal;
       body += `<tr class="forecast-total">${rowCells({ label: ft.label || "월마감 예상매출 합계", targetShipped: ft.targetShipped, targetReturns: ft.targetReturns, targetNet: ft.targetNet, shipped: ft.shipped, returns: ft.returns, net: ft.net, progress: ft.progress }, '')}${reasonCell(forecastReason, true)}</tr>`;
@@ -830,7 +837,7 @@ function renderMonthlySales(ms) {
         <td class="num">${fmt2(r.returns)}</td>
         <td class="num">${fmt2(r.net)}</td>
         ${pctCell(r.progress, r.type === 'normal' ? pctCls(r.progress) : '')}
-        ${reasonCell(r.remark)}
+        ${reasonCell(r.remark, false, r.type === 'total' ? '' : teamName(r.label))}
       </tr>`).join("");
     if (ms.forecastTotal) {
       const ft = ms.forecastTotal;
@@ -879,10 +886,14 @@ function renderMonthlySales(ms) {
   `;
 
   el.querySelectorAll('.reason-btn').forEach(btn => {
-    btn.addEventListener('click', () => openReasonModal(
-      btn.getAttribute('data-reason'),
-      btn.hasAttribute('data-common') ? commonTableHTML : ''
-    ));
+    btn.addEventListener('click', () => {
+      const team = btn.getAttribute('data-team');
+      openReasonModal(
+        btn.getAttribute('data-reason'),
+        btn.hasAttribute('data-common') ? commonTableHTML : '',
+        team ? `[${team}]` : undefined   // 개별 팀/파트 행 → 제목 '[팀/파트명]'
+      );
+    });
   });
   const closingBtn = el.querySelector('.closing-btn');
   if (closingBtn) closingBtn.addEventListener('click', () => openReasonModal('', closingHTML, '(8월) 마감 실적'));
@@ -893,7 +904,7 @@ function renderMonthlySales(ms) {
 //  · 빈 행 = 완전 별개 '영역' 경계(병합 피복행은 경계 아님)
 //  · 행이 '*'로 시작하거나 채워진 칸이 1개면 '텍스트(문구/캡션)' — 표로 만들지 않음(표 바로 앞이면 캡션)
 //  · 표는 시트의 행/열 병합(rowspan/colspan)을 그대로 적용, 병합 셀은 상하좌우 중앙정렬(.mg)
-function buildCommonContent(grid) {
+function buildCommonContent(grid, noLabel) {
   if (!grid || !grid.length) return '';
   const nz = s => String(s == null ? "" : s).trim();
   // 셀 정규화: null=병합 피복, 문자열=구형, 객체={v,rs,cs}
@@ -996,7 +1007,9 @@ function buildCommonContent(grid) {
     return `<div class="reason-common-region">${parts.join('')}</div>`;
   };
   const regionsHTML = regions.map(renderRegion).filter(Boolean).join('');
-  return `<div class="reason-common"><div class="reason-common-title"><strong>(공통)</strong></div>${regionsHTML}</div>`;
+  // noLabel=true → '(공통)' 제목 제외(예: 마감 실적 팝업). 기본은 '(공통)' 라벨 표시(합계행 시트10 팝업).
+  const titleHTML = noLabel ? '' : `<div class="reason-common-title"><strong>(공통)</strong></div>`;
+  return `<div class="reason-common">${titleHTML}${regionsHTML}</div>`;
 }
 
 // 증감사유 레이어창 — 비고 내용을 표 본문과 동일한 폰트 크기로 표시. extraHTML(공통 표)은 텍스트 하단에 부착.
