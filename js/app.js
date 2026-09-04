@@ -1632,7 +1632,7 @@ function trendCfg() {
   }
   return {
     data: TREND_DATA, groups: ["전체", "중고등영업팀", "ELT영업팀", "Times", "저작권", "리플릿"], div: 1, unit: "억", override: true,
-    legend: '<span><b>중고등영업팀</b> = 참고서(영/수/국) + 교과서 + AIDT</span><span><b>ELT영업팀</b> = B&amp;G + OUP</span><span><b>Times</b> = NE Times(B2B+B2C), 순매출</span>',
+    legend: '<span><b>중고등영업팀</b> = 참고서(영/수/국) + 교과서 + AIDT</span><span><b>ELT영업팀</b> = B&amp;G + OUP</span><span><b>Times</b> = NE Times(B2B+B2C)</span>',
     titleBar: "월별 매출 (26 vs 25)", titleCum: "연누적 매출 추이 (26 vs 25)",
   };
 }
