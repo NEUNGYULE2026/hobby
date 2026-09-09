@@ -1,5 +1,9 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.86
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.87
+ *
+ * v3.87 변경
+ *  - 총매출 추세 우측 범례에서 'Times = NE Times(B2B+B2C)' 주석 제거(그룹 자체는 유지). 범례 잔존: 중고등·ELT·NELT.
+ *  - 총매출 추세 그룹 라벨(선택 칩) 'Times' → 'TIMES'(대문자). 그룹명=데이터 키라 동시 교체: trendCfg groups·buildTrendOverride ov 키(app.js) + TREND_DATA.series·progressDaily25 키(trend-data.js v31). 시트 오버라이드 매칭 정규식 /Times|영업마케팅/i는 대소문자 무시라 그대로 동작.
  *
  * v3.86 변경
  *  - 총매출 추세 'NELT' 그룹 신설(저작권·리플릿 사이, 범례 주석 'NELT = NELT + 엔이튜터'). 손익센터 NELT+엔이튜터 병합, '순매출 기준'(양수+음수 순액, Times와 동일). trendCfg groups·범례(app.js) + TREND_DATA.series·progressDaily25(trend-data.js) 반영. buildTrendOverride에 NELT 분기 추가(반드시 ELT보다 먼저 — 'NELT'⊃'ELT' 오탐 방지). ※NELT/엔이튜터는 종전 어느 그룹에도 미포함(전체서도 제외)이었어서, 신설로 완결월(1~8월) '전체'가 NELT만큼 상향(기존 6개 그룹값은 불변). 진행월(9월*)은 시트에 NELT 행이 없어 폴백 0(전체 진행월엔 미반영). Code.gs 변경 없음(프론트만 배포).
@@ -1617,7 +1621,7 @@ function buildTrendOverride(rows) {
     if (/중고등|영업\s*1\s*파트/.test(lbl))      { ov["중고등"] = s; partSum += s; hasPart = true; }  // 구 영업1파트/중고등영업팀
     else if (/NELT|엔이튜터/i.test(lbl))      { if (ov["NELT"] == null) { ov["NELT"] = s; partSum += s; hasPart = true; } }  // ⚠️ ELT보다 먼저('NELT'⊃'ELT' 오탐 방지). 현재 시트엔 NELT 행 없음(진행월 폴백 0)
     else if (/ELT|영업\s*2\s*파트/.test(lbl)) { ov["ELT"] = s; partSum += s; hasPart = true; }  // 구 영업2파트/ELT영업팀
-    else if (/Times|영업마케팅/i.test(lbl))   { if (ov["Times"] == null) { ov["Times"] = s; partSum += s; hasPart = true; } }  // (영업마케팅팀) Times
+    else if (/Times|영업마케팅/i.test(lbl))   { if (ov["TIMES"] == null) { ov["TIMES"] = s; partSum += s; hasPart = true; } }  // (영업마케팅팀) TIMES(키 대문자)
     else if (/주니어랩|CP\(/.test(lbl))    { if (ov["주니어랩"] == null) { ov["주니어랩"] = s; partSum += s; hasPart = true; } }  // CP(주니어랩)=JL(FC)
     else if (/저작권/.test(lbl))          { if (ov["저작권"] == null) ov["저작권"] = s; }
     else if (/리플릿/.test(lbl))          { if (ov["리플릿"] == null) ov["리플릿"] = s; }
@@ -1639,8 +1643,8 @@ function trendCfg() {
     };
   }
   return {
-    data: TREND_DATA, groups: ["전체", "중고등", "ELT", "Times", "저작권", "NELT", "리플릿", "주니어랩"], div: 1, unit: "억", override: true,
-    legend: '<span><b>중고등</b> = 참고서(영/수/국) + 교과서 + AIDT</span><span><b>ELT</b> = B&amp;G + OUP</span><span><b>Times</b> = NE Times(B2B+B2C)</span><span><b>NELT</b> = NELT + 엔이튜터</span>',
+    data: TREND_DATA, groups: ["전체", "중고등", "ELT", "TIMES", "저작권", "NELT", "리플릿", "주니어랩"], div: 1, unit: "억", override: true,
+    legend: '<span><b>중고등</b> = 참고서(영/수/국) + 교과서 + AIDT</span><span><b>ELT</b> = B&amp;G + OUP</span><span><b>NELT</b> = NELT + 엔이튜터</span>',
     titleBar: "월별 매출 (26 vs 25)", titleCum: "연누적 매출 추이 (26 vs 25)",
   };
 }
