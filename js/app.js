@@ -1,5 +1,10 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.83
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.84
+ *
+ * v3.84 변경
+ *  - 총매출 추세 그룹 라벨 변경: 중고등영업팀→중고등, ELT영업팀→ELT(트렌드 그룹 키·범례·buildTrendOverride ov키 전부). ※부서별 보고 팀명은 무관(그대로).
+ *  - 총매출 추세 '주니어랩' 그룹 신설(맨 끝, 범례 주석 없음). 손익센터 JL(FC)=주니어랩, '총매출 기준'(일반 규칙: A/R송장 순액+나머지 양수)으로 집계, 영업1파트에서 분리. buildTrendOverride에 (영업마케팅팀)CP(주니어랩) 행 총출고→ov["주니어랩"] 매핑(/주니어랩|CP\(/).
+ *  - rawdata 9/9 재업로드분 + 컷 9/9로 총매출·출고수량·브랜드·QTY10 전체 재집계. Code.gs 변경 없음(프론트만 배포).
  *
  * v3.83 변경
  *  - 총매출 추세에 'Times' 그룹 추가(ELT영업팀·저작권 사이). trendCfg groups·범례(Times=NE Times(B2B+B2C), 순매출)·buildTrendOverride((영업마케팅팀) Times 행 총출고→ov["Times"]) 반영. 데이터=trend-data.js(손익센터 NE Times(B2B)+(B2C) 순액 집계, 영업1파트에서 분리). ※ rawdata 9/4 재업로드분으로 총매출·출고수량·브랜드·QTY10 전체 9/4 재집계(1~8월 값 소폭 갱신, 25년 포함). Code.gs 변경 없음(프론트만 배포).
@@ -1608,9 +1613,10 @@ function buildTrendOverride(rows) {
     const lbl = String(r && r.label != null ? r.label : "");
     const s = Number(r && r.shipped);
     if (!isFinite(s)) return;
-    if (/중고등|영업\s*1\s*파트/.test(lbl))      { ov["중고등영업팀"] = s; partSum += s; hasPart = true; }  // 구 영업1파트
-    else if (/ELT|영업\s*2\s*파트/.test(lbl)) { ov["ELT영업팀"] = s; partSum += s; hasPart = true; }  // 구 영업2파트
+    if (/중고등|영업\s*1\s*파트/.test(lbl))      { ov["중고등"] = s; partSum += s; hasPart = true; }  // 구 영업1파트/중고등영업팀
+    else if (/ELT|영업\s*2\s*파트/.test(lbl)) { ov["ELT"] = s; partSum += s; hasPart = true; }  // 구 영업2파트/ELT영업팀
     else if (/Times|영업마케팅/i.test(lbl))   { if (ov["Times"] == null) { ov["Times"] = s; partSum += s; hasPart = true; } }  // (영업마케팅팀) Times
+    else if (/주니어랩|CP\(/.test(lbl))    { if (ov["주니어랩"] == null) { ov["주니어랩"] = s; partSum += s; hasPart = true; } }  // CP(주니어랩)=JL(FC)
     else if (/저작권/.test(lbl))          { if (ov["저작권"] == null) ov["저작권"] = s; }
     else if (/리플릿/.test(lbl))          { if (ov["리플릿"] == null) ov["리플릿"] = s; }
     if (r && r.type === "total")          { ov["전체"] = s; }
@@ -1631,8 +1637,8 @@ function trendCfg() {
     };
   }
   return {
-    data: TREND_DATA, groups: ["전체", "중고등영업팀", "ELT영업팀", "Times", "저작권", "리플릿"], div: 1, unit: "억", override: true,
-    legend: '<span><b>중고등영업팀</b> = 참고서(영/수/국) + 교과서 + AIDT</span><span><b>ELT영업팀</b> = B&amp;G + OUP</span><span><b>Times</b> = NE Times(B2B+B2C)</span>',
+    data: TREND_DATA, groups: ["전체", "중고등", "ELT", "Times", "저작권", "리플릿", "주니어랩"], div: 1, unit: "억", override: true,
+    legend: '<span><b>중고등</b> = 참고서(영/수/국) + 교과서 + AIDT</span><span><b>ELT</b> = B&amp;G + OUP</span><span><b>Times</b> = NE Times(B2B+B2C)</span>',
     titleBar: "월별 매출 (26 vs 25)", titleCum: "연누적 매출 추이 (26 vs 25)",
   };
 }
