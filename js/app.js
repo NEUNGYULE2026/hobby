@@ -1,5 +1,11 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.89
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.91
+ *
+ * v3.91 변경
+ *  - 마감 실적 버튼·팝업 타이틀을 **호출 시트명 그대로**(ms.closingSheet) 표시로 변경(예 비고 셀에 '9월 가마감' → 버튼·제목 '9월 가마감'). closingSheet 없을 때만 '실적 요약' 폴백. 버튼은 escape, 팝업 제목은 openReasonModal textContent. Code.gs 변경 없음(closingSheet 기존 반환값 사용).
+ *
+ * v3.90 변경
+ *  - 월별 매출현황 마감 실적 버튼·팝업 타이틀 '(8월) 마감 실적' → '실적 요약'으로 교체(월 표기 제거 → 월 바뀌어도 수정 불필요). 버튼 라벨 + openReasonModal titleOverride 2곳. 트리거/읽기 로직(closingGrid)은 불변. Code.gs 변경 없음(프론트만).
  *
  * v3.89 변경
  *  - 부서별 주간 보고: 구글시트 개편(이슈사항·사유/해결책 2열 → '이슈/해결책' 1열) 반영. DEPT_HEADERS_DEFAULT 8→7개, renderDeptTable 7컬럼화. 병합 셀은 it.delay+it.upcoming 합쳐 표기(신 시트=delay만, 구 2열 주차도 호환). 줄인 1열만큼 (금주)진행사항 col 폭 확대(19%→34%), 이슈/해결책 19%. 셀 색은 중립(c-issue, 기존 c-delay 빨강 제거 — 해결책까지 빨개지지 않게). 하드코딩 팀 데이터(mkt/production) headers도 7개로. Code.gs 변경 없음(헤더명 매핑이라 '이슈/해결책'→delay 자동, 프론트만 배포).
@@ -904,9 +910,10 @@ function renderMonthlySales(ms) {
       </table>`;
   }
 
-  // (8월) 마감 실적 버튼 — 표 밖(우측). 표 라벨 행 비고(K)열에 시트명이 있을 때만 노출(closingHTML 존재 시).
+  // 실적 요약 버튼 — 표 밖(우측). 표 라벨 행 비고(K)열에 시트명이 있을 때만 노출(closingHTML 존재 시). 버튼 문구=그 시트명(ms.closingSheet).
+  const closingLabel = (ms.closingSheet && String(ms.closingSheet).trim()) || "실적 요약";
   const closingBar = closingHTML
-    ? `<div class="sales-toolbar"><button class="closing-btn" type="button">(8월) 마감 실적</button></div>`
+    ? `<div class="sales-toolbar"><button class="closing-btn" type="button">${escape(closingLabel)}</button></div>`
     : "";
 
   el.innerHTML = `
@@ -929,7 +936,7 @@ function renderMonthlySales(ms) {
     });
   });
   const closingBtn = el.querySelector('.closing-btn');
-  if (closingBtn) closingBtn.addEventListener('click', () => openReasonModal('', closingHTML, '(8월) 마감 실적'));
+  if (closingBtn) closingBtn.addEventListener('click', () => openReasonModal('', closingHTML, closingLabel));
   bindTrendExpander(el);
 }
 
