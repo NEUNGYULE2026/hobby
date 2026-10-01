@@ -12,7 +12,7 @@ const MKT_TEAM = {
   id: "mktstrategy",
   name: "마케팅전략팀",
   cls: "t-sales",
-  headers: ["업무","목적","시작일","종료일","진도율","(금주)진행사항","이슈 사항","사유,해결책"],
+  headers: ["업무","목적","시작일","종료일","진도율","(금주)진행사항","이슈/해결책"],
   parts: [
     {
       part: "DI파트", id: "mkt-di",

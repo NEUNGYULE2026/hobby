@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.88
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.89
+ *
+ * v3.89 변경
+ *  - 부서별 주간 보고: 구글시트 개편(이슈사항·사유/해결책 2열 → '이슈/해결책' 1열) 반영. DEPT_HEADERS_DEFAULT 8→7개, renderDeptTable 7컬럼화. 병합 셀은 it.delay+it.upcoming 합쳐 표기(신 시트=delay만, 구 2열 주차도 호환). 줄인 1열만큼 (금주)진행사항 col 폭 확대(19%→34%), 이슈/해결책 19%. 셀 색은 중립(c-issue, 기존 c-delay 빨강 제거 — 해결책까지 빨개지지 않게). 하드코딩 팀 데이터(mkt/production) headers도 7개로. Code.gs 변경 없음(헤더명 매핑이라 '이슈/해결책'→delay 자동, 프론트만 배포).
  *
  * v3.88 변경
  *  - 출고수량 추세 '거래처' 드릴다운 신설(우측 드롭다운, TREND_QTY_DEALER). 노출 조건 = 구분(영어/B&G/OUP) + 채널(오프라인/온라인). 거래처 선택 시 그 거래처 월별 출고수량(26 vs 25)으로 드릴다운(주요브랜드와 동일 방식, 고정축 유지). 기본값 '선택'=채널 합계.
@@ -1255,8 +1258,8 @@ function openProgressBasis(task, pct, basis) {
   m.classList.add("open");
 }
 
-// 부서별 주간 보고 기본 헤더(수도권세일즈팀 등). 진행사항→(금주)진행사항, 예정사항→(차주)예정사항
-const DEPT_HEADERS_DEFAULT = ["업무","목적","시작일","종료일","진척율","(금주)진행사항","이슈사항","사유/해결책"];
+// 부서별 주간 보고 기본 헤더(수도권세일즈팀 등). 이슈사항·사유/해결책 2열 → '이슈/해결책' 1열로 통합(시트 개편 2026-10-01).
+const DEPT_HEADERS_DEFAULT = ["업무","목적","시작일","종료일","진척율","(금주)진행사항","이슈/해결책"];
 
 // 부서별 주간 보고 — 파트별 표. headers로 열 라벨 커스터마이즈(팀별 상이 가능)
 function renderDeptTable(items, headers) {
@@ -1267,6 +1270,8 @@ function renderDeptTable(items, headers) {
     const isStar = it.isStar === true || /^\s*\[★\]\s*/.test(title) || /^\s*★\s*/.test(title);
     const titleClean = title.replace(/^\s*\[★\]\s*/, "").replace(/^\s*★\s*/, "").trim();
     const p = Math.max(0, Math.min(100, Number(it.progress) || 0));
+    // 이슈/해결책 1열: delay(이슈)+upcoming(해결책) 병합 — 신 시트는 delay만, 구 시트(2열 주차)는 둘 다 합쳐 표기
+    const issue = [it.delay, it.upcoming].map(x => String(x == null ? "" : x).trim()).filter(Boolean).join("\n");
     return `
       <tr class="${isStar ? "is-star" : ""}">
         <td class="c-task">${escape(titleClean)}${isStar ? ' <span class="key-badge">핵심</span>' : ""}</td>
@@ -1275,19 +1280,18 @@ function renderDeptTable(items, headers) {
         <td class="c-date">${escape(it.endDate || "") || "-"}</td>
         <td class="c-prog"><div class="pgauge"><div class="pgauge-bar"><div class="pgauge-fill ${p >= 100 ? "full" : ""}" style="height:${p}%"></div></div><span class="pgauge-pct">${p}%${(it.progressBasis && String(it.progressBasis).trim()) ? ` <span class="basis-i" role="button" tabindex="0" title="진척율 판단근거" aria-label="진척율 판단근거" data-task="${escape(titleClean)}" data-pct="${p}" data-basis="${escape(it.progressBasis)}">i</span>` : ""}</span></div></td>
         <td class="c-note">${cell(it.progressNote)}</td>
-        <td class="c-delay">${cell(it.delay)}</td>
-        <td class="c-next">${cell(it.upcoming)}</td>
+        <td class="c-issue">${issue ? nlbr(issue) : "-"}</td>
       </tr>`;
   }).join("");
   return `
     <table class="dept-table">
       <colgroup>
-        <col style="width:13%"/><col style="width:15%"/><col style="width:7%"/><col style="width:7%"/>
-        <col style="width:7%"/><col style="width:19%"/><col style="width:14%"/><col style="width:18%"/>
+        <col style="width:12%"/><col style="width:14%"/><col style="width:7%"/><col style="width:7%"/>
+        <col style="width:7%"/><col style="width:34%"/><col style="width:19%"/>
       </colgroup>
       <thead><tr>
         <th>${escape(H[0])}</th><th>${escape(H[1])}</th><th class="c-date">${escape(H[2])}</th><th class="c-date">${escape(H[3])}</th>
-        <th class="c-prog">${escape(H[4])}</th><th>${escape(H[5])}</th><th>${escape(H[6])}</th><th>${escape(H[7])}</th>
+        <th class="c-prog">${escape(H[4])}</th><th>${escape(H[5])}</th><th>${escape(H[6])}</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
