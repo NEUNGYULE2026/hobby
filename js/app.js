@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.91
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.92
+ *
+ * v3.92 변경
+ *  - 월별 매출현황 '계층형(C안 토글)' 렌더 추가 — 시트 개편(M10-W3~, Code.gs v3.23 hier=true) 대응. 소계 행=토글 부모(라벨=팀, ▶/▼), 품목 행=기본 숨김 자식(소계 클릭 시 펼침/접힘, data-grp 매칭), 단일품목 팀(저작권/리플릿/NELT 등)=상단 직접 표시, 합계=하단. measCells/rowCells 분리. ms.hier 아니면(구 평면 주차) 기존 2단 렌더 그대로. style.css: .ms-parent(커서)·.ms-caret·.ms-child·.c-ms-item(들여쓰기). Code.gs v3.23 재배포 필요.
  *
  * v3.91 변경
  *  - 마감 실적 버튼·팝업 타이틀을 **호출 시트명 그대로**(ms.closingSheet) 표시로 변경(예 비고 셀에 '9월 가마감' → 버튼·제목 '9월 가마감'). closingSheet 없을 때만 '실적 요약' 폴백. 버튼은 escape, 팝업 제목은 openReasonModal textContent. Code.gs 변경 없음(closingSheet 기존 반환값 사용).
@@ -833,12 +836,31 @@ function renderMonthlySales(ms) {
   let tableHtml;
   if (twoTier) {
     // 신 2단: 팀/파트 | 목표(총출고·반품·순매출액) | 실적(총출고·반품·순매출액) | 진척율 | 증감사유
-    const rowCells = (o, pcls) =>
-      `<td>${escape(o.label)}</td>`
-      + `<td class="num tgt gsep">${fmt2(o.targetShipped)}</td><td class="num tgt">${fmt2(o.targetReturns)}</td><td class="num tgt">${fmt2(o.targetNet)}</td>`
+    const measCells = (o, pcls) =>
+      `<td class="num tgt gsep">${fmt2(o.targetShipped)}</td><td class="num tgt">${fmt2(o.targetReturns)}</td><td class="num tgt">${fmt2(o.targetNet)}</td>`
       + `<td class="num gsep">${fmt2(o.shipped)}</td><td class="num">${fmt2(o.returns)}</td><td class="num">${fmt2(o.net)}</td>`
       + `<td class="num gsep ${pcls}">${fmtPct(o.progress)}</td>`;
-    let body = rows.map(r => `<tr class="${r.type}">${rowCells(r, r.type === 'normal' ? pctCls(r.progress) : '')}${reasonCell(r.remark, false, r.type === 'total' ? '' : teamName(r.label))}</tr>`).join("");
+    const rowCells = (o, pcls) => `<td>${escape(o.label)}</td>` + measCells(o, pcls);
+    let body;
+    if (ms.hier) {
+      // 계층형(C안): 소계=토글 부모(라벨=팀), 품목=숨김 자식(소계 클릭 시 펼침), 단일품목 팀=상단 직접 표시, 합계=하단.
+      const order = [], byTeam = {};
+      rows.forEach(r => { if (r.type === 'total') return; const g = r.group || r.label; if (!byTeam[g]) { byTeam[g] = []; order.push(g); } byTeam[g].push(r); });
+      body = "";
+      order.forEach(g => {
+        const grp = byTeam[g], sub = grp.find(r => r.type === 'subtotal'), items = grp.filter(r => r.type === 'item');
+        if (sub) {
+          body += `<tr class="subtotal ms-parent" data-grp="${escape(g)}"><td class="c-ms-tgl"><span class="ms-caret" aria-hidden="true">▶</span>${escape(g)}</td>${measCells(sub, '')}${reasonCell(sub.remark, false, g)}</tr>`;
+          items.forEach(it => { body += `<tr class="ms-child" data-grp="${escape(g)}" hidden><td class="c-ms-item">${escape(it.label)}</td>${measCells(it, '')}${reasonCell(it.remark, false, it.label)}</tr>`; });
+        } else {
+          items.forEach(it => { body += `<tr class="normal"><td>${escape(it.label)}</td>${measCells(it, '')}${reasonCell(it.remark, false, it.label)}</tr>`; });
+        }
+      });
+      const tot = rows.find(r => r.type === 'total');
+      if (tot) body += `<tr class="total"><td>${escape(tot.label)}</td>${measCells(tot, '')}${reasonCell(tot.remark, false, '')}</tr>`;
+    } else {
+      body = rows.map(r => `<tr class="${r.type}">${rowCells(r, r.type === 'normal' ? pctCls(r.progress) : '')}${reasonCell(r.remark, false, r.type === 'total' ? '' : teamName(r.label))}</tr>`).join("");
+    }
     if (ms.forecastTotal) {
       const ft = ms.forecastTotal;
       body += `<tr class="forecast-total">${rowCells({ label: ft.label || "월마감 예상매출 합계", targetShipped: ft.targetShipped, targetReturns: ft.targetReturns, targetNet: ft.targetNet, shipped: ft.shipped, returns: ft.returns, net: ft.net, progress: ft.progress }, '')}${reasonCell(forecastReason, true)}</tr>`;
@@ -937,6 +959,16 @@ function renderMonthlySales(ms) {
   });
   const closingBtn = el.querySelector('.closing-btn');
   if (closingBtn) closingBtn.addEventListener('click', () => openReasonModal('', closingHTML, closingLabel));
+  // 계층형(C안) 소계 행 토글 — 클릭 시 해당 팀 품목(자식) 행 펼침/접힘
+  el.querySelectorAll('tr.ms-parent').forEach(tr => {
+    tr.addEventListener('click', (e) => {
+      if (e.target.closest('.reason-btn')) return;   // 비고 돋보기 클릭은 제외
+      const g = tr.getAttribute('data-grp');
+      const open = tr.classList.toggle('open');
+      const caret = tr.querySelector('.ms-caret'); if (caret) caret.textContent = open ? '▼' : '▶';
+      el.querySelectorAll(`tr.ms-child[data-grp="${(window.CSS && CSS.escape) ? CSS.escape(g) : g}"]`).forEach(c => { c.hidden = !open; });
+    });
+  });
   bindTrendExpander(el);
 }
 

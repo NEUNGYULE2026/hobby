@@ -484,6 +484,15 @@ a { color: inherit; text-decoration: none; }
   color: #fff;
   border-color: rgba(255,255,255,0.3);
 }
+/* 월별 매출현황 계층형(C안) — 소계=토글 부모, 품목=자식(펼침/접힘) */
+.sales-table tr.ms-parent { cursor: pointer; }
+.sales-table tr.ms-parent:hover td { background: #5A5175; }
+.sales-table td.c-ms-tgl { color: #fff; font-weight: 600; }
+.ms-caret { display: inline-block; width: 12px; margin-right: 6px; font-size: 9px; color: #fff; vertical-align: middle; }
+.sales-table tr.ms-child td { background: #fff; color: var(--text); font-weight: 400; }
+.sales-table tr.ms-child td.tgt { background: #F6F9FC; }
+.sales-table td.c-ms-item { padding-left: 26px; color: var(--text-soft); }
+
 .sales-table td.up   { color: #16A34A; font-weight: 600; }
 .sales-table td.down { color: #DC2626; font-weight: 600; }
 
