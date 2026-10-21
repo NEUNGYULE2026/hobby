@@ -2,7 +2,7 @@
  * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.92
  *
  * v3.92 변경
- *  - 월별 매출현황 '계층형(C안 토글)' 렌더 추가 — 시트 개편(M10-W3~, Code.gs v3.23 hier=true) 대응. **팀·사업 2열 분리**(헤더 팀|사업, colgroup/헤더 hier 분기). 기본=팀/소계: 멀티 사업 팀은 **소계 행(팀▶ + 사업 '소계')=토글 부모**, 클릭 시 사업 품목 자식(빈 팀칸 + 사업명) 펼침/접힘(data-grp 매칭). **단일 사업 팀(영업전략팀=저작권/제작팀=리플릿/서비스기획1팀=NELT)=팀+사업 그대로 표시**(토글 없음). 합계·예상마감 행은 라벨 colspan=2. measCells/rowCells 분리. ms.hier 아니면(구 평면 주차) 기존 1열 2단 렌더 그대로. style.css: .ms-parent·.ms-caret·.ms-child·.c-ms-item(들여쓰기)·.c-ms-biz. Code.gs v3.23 재배포 필요.
+ *  - 월별 매출현황 '계층형(C안 토글)' 렌더 추가 — 시트 개편(M10-W3~, Code.gs v3.23 hier=true) 대응. **팀·사업 2열 분리**(헤더 팀|사업, colgroup/헤더 hier 분기). 기본=팀/소계: 멀티 사업 팀은 **소계 행(팀▶ + 사업 '소계')=토글 부모**, 클릭 시 사업 품목 자식(빈 팀칸 + 사업명) 펼침/접힘(data-grp 매칭). **단일 사업 팀(영업전략팀=저작권/제작팀=리플릿/서비스기획1팀=NELT)=팀+사업 그대로 표시**(토글 없음). 합계·예상마감 행은 라벨 colspan=2. measCells/rowCells 분리. 테이블에 `sales-hier` 클래스 부여. ms.hier 아니면(구 평면 주차) 기존 1열 2단 렌더 그대로. **디자인 정돈(2026-10-21)**: 소계(토글) 행을 다크(#4A4263)→**소프트 블루(#E9F1FB, 대시보드 톤)**로, 합계는 다크 유지(위계), **팀 열 nowrap(줄바꿈 방지)**, **팀|사업 구분선**(사업열 border-left). style.css: .sales-hier .ms-parent/.ms-caret/.ms-child/.c-ms-item(들여쓰기)/.c-ms-biz·구분선·nowrap. Code.gs v3.23+ 재배포 필요.
  *
  * v3.91 변경
  *  - 마감 실적 버튼·팝업 타이틀을 **호출 시트명 그대로**(ms.closingSheet) 표시로 변경(예 비고 셀에 '9월 가마감' → 버튼·제목 '9월 가마감'). closingSheet 없을 때만 '실적 요약' 폴백. 버튼은 escape, 팝업 제목은 openReasonModal textContent. Code.gs 변경 없음(closingSheet 기존 반환값 사용).
@@ -871,8 +871,8 @@ function renderMonthlySales(ms) {
     // colgroup/헤더 — 계층형은 팀+사업 2열, 평면형은 팀/파트 1열
     const cg = ms.hier
       ? (showReason
-          ? `<col style="width:9%"/><col style="width:12%"/><col style="width:10%"/><col style="width:9%"/><col style="width:10%"/><col style="width:10%"/><col style="width:9%"/><col style="width:10%"/><col style="width:11%"/><col style="width:10%"/>`
-          : `<col style="width:10%"/><col style="width:13%"/><col style="width:11%"/><col style="width:10%"/><col style="width:11%"/><col style="width:11%"/><col style="width:10%"/><col style="width:11%"/><col style="width:13%"/>`)
+          ? `<col style="width:12%"/><col style="width:11%"/><col style="width:10%"/><col style="width:8%"/><col style="width:10%"/><col style="width:10%"/><col style="width:8%"/><col style="width:10%"/><col style="width:11%"/><col style="width:10%"/>`
+          : `<col style="width:13%"/><col style="width:13%"/><col style="width:11%"/><col style="width:9%"/><col style="width:11%"/><col style="width:11%"/><col style="width:9%"/><col style="width:11%"/><col style="width:12%"/>`)
       : (showReason
           ? `<col style="width:20%"/><col style="width:10%"/><col style="width:9%"/><col style="width:11%"/><col style="width:10%"/><col style="width:9%"/><col style="width:11%"/><col style="width:11%"/><col style="width:9%"/>`
           : `<col style="width:22%"/><col style="width:11%"/><col style="width:10%"/><col style="width:12%"/><col style="width:11%"/><col style="width:10%"/><col style="width:12%"/><col style="width:12%"/>`);
@@ -881,7 +881,7 @@ function renderMonthlySales(ms) {
       ? `<th rowspan="2" class="tm">팀</th><th rowspan="2" class="tm">사업</th>`
       : `<th rowspan="2" class="tm">${escape(h.team || '팀 / 파트')}</th>`;
     tableHtml = `
-      <table class="sales-table sales-2tier">
+      <table class="sales-table sales-2tier${ms.hier ? ' sales-hier' : ''}">
         <colgroup>${cg}</colgroup>
         <thead>
           <tr>

@@ -484,14 +484,21 @@ a { color: inherit; text-decoration: none; }
   color: #fff;
   border-color: rgba(255,255,255,0.3);
 }
-/* 월별 매출현황 계층형(C안) — 소계=토글 부모, 품목=자식(펼침/접힘) */
-.sales-table tr.ms-parent { cursor: pointer; }
-.sales-table tr.ms-parent:hover td { background: #5A5175; }
-.sales-table td.c-ms-tgl { color: #fff; font-weight: 600; }
-.ms-caret { display: inline-block; width: 12px; margin-right: 6px; font-size: 9px; color: #fff; vertical-align: middle; }
-.sales-table tr.ms-child td { background: #fff; color: var(--text); font-weight: 400; }
-.sales-table tr.ms-child td.tgt { background: #F6F9FC; }
-.sales-table td.c-ms-item { padding-left: 26px; color: var(--text-soft); }
+/* 월별 매출현황 계층형(C안) — 팀·사업 2열, 소계=토글 부모(대시보드 톤 소프트 블루), 품목=자식 */
+.sales-hier tr.ms-parent { cursor: pointer; }
+.sales-hier tr.ms-parent td { background: #E9F1FB; color: #1F3A5F; font-weight: 600; }      /* 소계(토글) 행 — 칙칙한 다크 대신 소프트 블루 */
+.sales-hier tr.ms-parent:hover td { background: #DCE9F8; }
+.sales-hier tr.ms-parent td.tgt { background: #E2ECF9; }                                     /* 목표 3열 살짝 더 진한 톤 */
+.sales-hier td.c-ms-tgl { color: #1F3A5F; font-weight: 600; white-space: nowrap; }
+.sales-hier .ms-caret { display: inline-block; width: 12px; margin-right: 5px; font-size: 9px; color: #1F5E92; vertical-align: middle; }
+.sales-hier tr.ms-child td { background: #fff; color: var(--text); font-weight: 400; }
+.sales-hier tr.ms-child td.tgt { background: #F6F9FC; }
+.sales-hier td.c-ms-item { padding-left: 22px; color: var(--text-soft); }
+/* 팀 열 줄바꿈 방지 */
+.sales-hier td:first-child, .sales-hier th.tm { white-space: nowrap; }
+/* 팀 | 사업 영역 구분선 (사업 열 왼쪽) */
+.sales-hier thead th.tm + th.tm { border-left: 1px solid var(--border); }
+.sales-hier td.c-ms-biz, .sales-hier td.c-ms-item { border-left: 1px solid var(--border); }
 
 .sales-table td.up   { color: #16A34A; font-weight: 600; }
 .sales-table td.down { color: #DC2626; font-weight: 600; }
