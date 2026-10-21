@@ -490,6 +490,9 @@ a { color: inherit; text-decoration: none; }
 .sales-hier tr.ms-parent:hover td { background: #DCE9F8; }
 .sales-hier tr.ms-parent td.tgt { background: #E2ECF9; }                                     /* 목표 3열 살짝 더 진한 톤 */
 .sales-hier td.c-ms-tgl { color: #1F3A5F; font-weight: 600; white-space: nowrap; }
+/* 소계(ms-parent) 행 글자색 — 구 .subtotal td:first-child(흰색) 규칙을 덮어 짙은 남색으로(안 보이던 팀명 가시화) */
+.sales-table.sales-hier tr.subtotal.ms-parent td,
+.sales-table.sales-hier tr.subtotal.ms-parent td:first-child { color: #1F3A5F; }
 .sales-hier .ms-caret { display: inline-block; width: 12px; margin-right: 5px; font-size: 9px; color: #1F5E92; vertical-align: middle; }
 .sales-hier tr.ms-child td { background: #fff; color: var(--text); font-weight: 400; }
 .sales-hier tr.ms-child td.tgt { background: #F6F9FC; }
