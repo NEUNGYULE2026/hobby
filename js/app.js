@@ -2,7 +2,7 @@
  * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.92
  *
  * v3.92 변경
- *  - 월별 매출현황 '계층형(C안 토글)' 렌더 추가 — 시트 개편(M10-W3~, Code.gs v3.23 hier=true) 대응. **팀·사업 2열 분리**(헤더 팀|사업, colgroup/헤더 hier 분기). 기본=팀/소계: 멀티 사업 팀은 **소계 행(팀▶ + 사업 '소계')=토글 부모**, 클릭 시 사업 품목 자식(빈 팀칸 + 사업명) 펼침/접힘(data-grp 매칭). **단일 사업 팀(영업전략팀=저작권/제작팀=리플릿/서비스기획1팀=NELT)=팀+사업 그대로 표시**(토글 없음). 합계·예상마감 행은 라벨 colspan=2. measCells/rowCells 분리. 테이블에 `sales-hier` 클래스 부여. ms.hier 아니면(구 평면 주차) 기존 1열 2단 렌더 그대로. **디자인 정돈(2026-10-21)**: 소계(토글) 행을 다크(#4A4263)→**소프트 블루(#E9F1FB, 대시보드 톤)**로, 합계는 다크 유지(위계), **팀 열 nowrap(줄바꿈 방지)**, **팀|사업 구분선**(사업열 border-left). style.css: .sales-hier .ms-parent/.ms-caret/.ms-child/.c-ms-item(들여쓰기)/.c-ms-biz·구분선·nowrap. Code.gs v3.23+ 재배포 필요.
+ *  - 월별 매출현황 '계층형(C안 토글)' 렌더 추가 — 시트 개편(M10-W3~, Code.gs v3.23 hier=true) 대응. **팀·사업 2열 분리**(헤더 팀|사업, colgroup/헤더 hier 분기). 기본=팀/소계: 멀티 사업 팀은 **소계 행(팀▶ + 사업 '소계')=토글 부모**, 클릭 시 사업 품목 자식(빈 팀칸 + 사업명) 펼침/접힘(data-grp 매칭). **단일 사업 팀(영업전략팀=저작권/제작팀=리플릿/서비스기획1팀=NELT)=팀+사업 그대로 표시**(토글 없음). 합계·예상마감 행은 라벨 colspan=2. measCells/rowCells 분리. 테이블에 `sales-hier` 클래스 부여. ms.hier 아니면(구 평면 주차) 기존 1열 2단 렌더 그대로. **디자인 정돈(2026-10-21)**: 소계(토글) 행을 다크→**소프트 블루(#E9F1FB)**, **소계 글자색 #1F3A5F**(구 흰색 규칙 고특이도로 덮어 가시화), **소계 행을 사업(품목) 아래에 배치**(품목 자식 먼저→소계 하단 토글), 합계 바탕 #2E2A4D→**#1F5E92(브랜드 블루, 덜 튀게)**, 팀 열 nowrap, 팀|사업 구분선. style.css: .sales-hier .ms-parent/.ms-caret/.ms-child/.c-ms-item(들여쓰기)/.c-ms-biz·구분선·nowrap. Code.gs v3.23+ 재배포 필요.
  *
  * v3.91 변경
  *  - 마감 실적 버튼·팝업 타이틀을 **호출 시트명 그대로**(ms.closingSheet) 표시로 변경(예 비고 셀에 '9월 가마감' → 버튼·제목 '9월 가마감'). closingSheet 없을 때만 '실적 요약' 폴백. 버튼은 escape, 팝업 제목은 openReasonModal textContent. Code.gs 변경 없음(closingSheet 기존 반환값 사용).
@@ -850,9 +850,9 @@ function renderMonthlySales(ms) {
       order.forEach(g => {
         const grp = byTeam[g], sub = grp.find(r => r.type === 'subtotal'), items = grp.filter(r => r.type === 'item');
         if (sub) {
-          // 멀티 사업 팀: [팀(▶)] [소계] — 클릭 시 사업 품목 자식 펼침
-          body += `<tr class="subtotal ms-parent" data-grp="${escape(g)}"><td class="c-ms-tgl"><span class="ms-caret" aria-hidden="true">▶</span>${escape(g)}</td><td class="c-ms-biz">소계</td>${measCells(sub, '')}${reasonCell(sub.remark, false, g)}</tr>`;
+          // 멀티 사업 팀: 사업(품목) 자식 행 먼저(기본 숨김) → 소계(토글 부모)를 사업 영역 '아래'에 배치. 소계 클릭 시 위쪽 품목 펼침/접힘.
           items.forEach(it => { body += `<tr class="ms-child" data-grp="${escape(g)}" hidden><td class="c-ms-team2"></td><td class="c-ms-item">${escape(it.label)}</td>${measCells(it, '')}${reasonCell(it.remark, false, it.label)}</tr>`; });
+          body += `<tr class="subtotal ms-parent" data-grp="${escape(g)}"><td class="c-ms-tgl"><span class="ms-caret" aria-hidden="true">▶</span>${escape(g)}</td><td class="c-ms-biz">소계</td>${measCells(sub, '')}${reasonCell(sub.remark, false, g)}</tr>`;
         } else {
           // 단일 사업 팀: [팀] [사업] 그대로
           items.forEach(it => { body += `<tr class="normal"><td>${escape(g)}</td><td class="c-ms-biz">${escape(it.label)}</td>${measCells(it, '')}${reasonCell(it.remark, false, it.label)}</tr>`; });
