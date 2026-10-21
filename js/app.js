@@ -2,7 +2,7 @@
  * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.92
  *
  * v3.92 변경
- *  - 월별 매출현황 '계층형(C안 토글)' 렌더 추가 — 시트 개편(M10-W3~, Code.gs v3.23 hier=true) 대응. 소계 행=토글 부모(라벨=팀, ▶/▼), 품목 행=기본 숨김 자식(소계 클릭 시 펼침/접힘, data-grp 매칭), 단일품목 팀(저작권/리플릿/NELT 등)=상단 직접 표시, 합계=하단. measCells/rowCells 분리. ms.hier 아니면(구 평면 주차) 기존 2단 렌더 그대로. style.css: .ms-parent(커서)·.ms-caret·.ms-child·.c-ms-item(들여쓰기). Code.gs v3.23 재배포 필요.
+ *  - 월별 매출현황 '계층형(C안 토글)' 렌더 추가 — 시트 개편(M10-W3~, Code.gs v3.23 hier=true) 대응. **팀·사업 2열 분리**(헤더 팀|사업, colgroup/헤더 hier 분기). 기본=팀/소계: 멀티 사업 팀은 **소계 행(팀▶ + 사업 '소계')=토글 부모**, 클릭 시 사업 품목 자식(빈 팀칸 + 사업명) 펼침/접힘(data-grp 매칭). **단일 사업 팀(영업전략팀=저작권/제작팀=리플릿/서비스기획1팀=NELT)=팀+사업 그대로 표시**(토글 없음). 합계·예상마감 행은 라벨 colspan=2. measCells/rowCells 분리. ms.hier 아니면(구 평면 주차) 기존 1열 2단 렌더 그대로. style.css: .ms-parent·.ms-caret·.ms-child·.c-ms-item(들여쓰기)·.c-ms-biz. Code.gs v3.23 재배포 필요.
  *
  * v3.91 변경
  *  - 마감 실적 버튼·팝업 타이틀을 **호출 시트명 그대로**(ms.closingSheet) 표시로 변경(예 비고 셀에 '9월 가마감' → 버튼·제목 '9월 가마감'). closingSheet 없을 때만 '실적 요약' 폴백. 버튼은 escape, 팝업 제목은 openReasonModal textContent. Code.gs 변경 없음(closingSheet 기존 반환값 사용).
@@ -843,38 +843,49 @@ function renderMonthlySales(ms) {
     const rowCells = (o, pcls) => `<td>${escape(o.label)}</td>` + measCells(o, pcls);
     let body;
     if (ms.hier) {
-      // 계층형(C안): 소계=토글 부모(라벨=팀), 품목=숨김 자식(소계 클릭 시 펼침), 단일품목 팀=상단 직접 표시, 합계=하단.
+      // 계층형(C안): 팀·사업 2열. 기본=팀/소계(멀티 사업 팀은 소계=토글 부모, 클릭 시 사업 품목 펼침). 단일 사업 팀=팀/사업 그대로. 합계=하단.
       const order = [], byTeam = {};
       rows.forEach(r => { if (r.type === 'total') return; const g = r.group || r.label; if (!byTeam[g]) { byTeam[g] = []; order.push(g); } byTeam[g].push(r); });
       body = "";
       order.forEach(g => {
         const grp = byTeam[g], sub = grp.find(r => r.type === 'subtotal'), items = grp.filter(r => r.type === 'item');
         if (sub) {
-          body += `<tr class="subtotal ms-parent" data-grp="${escape(g)}"><td class="c-ms-tgl"><span class="ms-caret" aria-hidden="true">▶</span>${escape(g)}</td>${measCells(sub, '')}${reasonCell(sub.remark, false, g)}</tr>`;
-          items.forEach(it => { body += `<tr class="ms-child" data-grp="${escape(g)}" hidden><td class="c-ms-item">${escape(it.label)}</td>${measCells(it, '')}${reasonCell(it.remark, false, it.label)}</tr>`; });
+          // 멀티 사업 팀: [팀(▶)] [소계] — 클릭 시 사업 품목 자식 펼침
+          body += `<tr class="subtotal ms-parent" data-grp="${escape(g)}"><td class="c-ms-tgl"><span class="ms-caret" aria-hidden="true">▶</span>${escape(g)}</td><td class="c-ms-biz">소계</td>${measCells(sub, '')}${reasonCell(sub.remark, false, g)}</tr>`;
+          items.forEach(it => { body += `<tr class="ms-child" data-grp="${escape(g)}" hidden><td class="c-ms-team2"></td><td class="c-ms-item">${escape(it.label)}</td>${measCells(it, '')}${reasonCell(it.remark, false, it.label)}</tr>`; });
         } else {
-          items.forEach(it => { body += `<tr class="normal"><td>${escape(it.label)}</td>${measCells(it, '')}${reasonCell(it.remark, false, it.label)}</tr>`; });
+          // 단일 사업 팀: [팀] [사업] 그대로
+          items.forEach(it => { body += `<tr class="normal"><td>${escape(g)}</td><td class="c-ms-biz">${escape(it.label)}</td>${measCells(it, '')}${reasonCell(it.remark, false, it.label)}</tr>`; });
         }
       });
       const tot = rows.find(r => r.type === 'total');
-      if (tot) body += `<tr class="total"><td>${escape(tot.label)}</td>${measCells(tot, '')}${reasonCell(tot.remark, false, '')}</tr>`;
+      if (tot) body += `<tr class="total"><td colspan="2">${escape(tot.label)}</td>${measCells(tot, '')}${reasonCell(tot.remark, false, '')}</tr>`;
     } else {
       body = rows.map(r => `<tr class="${r.type}">${rowCells(r, r.type === 'normal' ? pctCls(r.progress) : '')}${reasonCell(r.remark, false, r.type === 'total' ? '' : teamName(r.label))}</tr>`).join("");
     }
     if (ms.forecastTotal) {
       const ft = ms.forecastTotal;
-      body += `<tr class="forecast-total">${rowCells({ label: ft.label || "월마감 예상매출 합계", targetShipped: ft.targetShipped, targetReturns: ft.targetReturns, targetNet: ft.targetNet, shipped: ft.shipped, returns: ft.returns, net: ft.net, progress: ft.progress }, '')}${reasonCell(forecastReason, true)}</tr>`;
+      const ftLabelCell = ms.hier ? `<td colspan="2">${escape(ft.label || "월마감 예상매출 합계")}</td>` : `<td>${escape(ft.label || "월마감 예상매출 합계")}</td>`;
+      body += `<tr class="forecast-total">${ftLabelCell}${measCells({ targetShipped: ft.targetShipped, targetReturns: ft.targetReturns, targetNet: ft.targetNet, shipped: ft.shipped, returns: ft.returns, net: ft.net, progress: ft.progress }, '')}${reasonCell(forecastReason, true)}</tr>`;
     }
-    const cg = showReason
-      ? `<col style="width:20%"/><col style="width:10%"/><col style="width:9%"/><col style="width:11%"/><col style="width:10%"/><col style="width:9%"/><col style="width:11%"/><col style="width:11%"/><col style="width:9%"/>`
-      : `<col style="width:22%"/><col style="width:11%"/><col style="width:10%"/><col style="width:12%"/><col style="width:11%"/><col style="width:10%"/><col style="width:12%"/><col style="width:12%"/>`;
+    // colgroup/헤더 — 계층형은 팀+사업 2열, 평면형은 팀/파트 1열
+    const cg = ms.hier
+      ? (showReason
+          ? `<col style="width:9%"/><col style="width:12%"/><col style="width:10%"/><col style="width:9%"/><col style="width:10%"/><col style="width:10%"/><col style="width:9%"/><col style="width:10%"/><col style="width:11%"/><col style="width:10%"/>`
+          : `<col style="width:10%"/><col style="width:13%"/><col style="width:11%"/><col style="width:10%"/><col style="width:11%"/><col style="width:11%"/><col style="width:10%"/><col style="width:11%"/><col style="width:13%"/>`)
+      : (showReason
+          ? `<col style="width:20%"/><col style="width:10%"/><col style="width:9%"/><col style="width:11%"/><col style="width:10%"/><col style="width:9%"/><col style="width:11%"/><col style="width:11%"/><col style="width:9%"/>`
+          : `<col style="width:22%"/><col style="width:11%"/><col style="width:10%"/><col style="width:12%"/><col style="width:11%"/><col style="width:10%"/><col style="width:12%"/><col style="width:12%"/>`);
     const sN = escape(h.net || '순매출액'), sS = escape(h.shipped || '총출고'), sR = escape(h.returns || '반품');
+    const teamHead = ms.hier
+      ? `<th rowspan="2" class="tm">팀</th><th rowspan="2" class="tm">사업</th>`
+      : `<th rowspan="2" class="tm">${escape(h.team || '팀 / 파트')}</th>`;
     tableHtml = `
       <table class="sales-table sales-2tier">
         <colgroup>${cg}</colgroup>
         <thead>
           <tr>
-            <th rowspan="2" class="tm">${escape(h.team || '팀 / 파트')}</th>
+            ${teamHead}
             <th colspan="3" class="grp gsep">${escape(h.targetGroup || '목표')}</th>
             <th colspan="3" class="grp gsep">${escape(h.actualGroup || '실적')}</th>
             <th rowspan="2" class="num gsep prog-th">${escape(h.progress || '진척율')}<span class="prog-basis">(총출고 기준)</span></th>
