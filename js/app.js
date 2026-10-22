@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.93
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.94
+ *
+ * v3.94 변경 (2026-10-22)
+ *  - 26신간 추세: ①품목 드롭다운에 **'전체'** 추가(전 품목 합산, 기본값=전체/전체채널). newItemCodes/newItemFirst/newItemName 헬퍼로 axis·valueMap·칩·차트가 '전체' 지원. ②노출 순서 변경 — **26신간 추세를 기존 추세(총매출/출고수량) 패널 위로 이동**. ③헤더 문구 '26신간 일별 실적 추세'→**'26신간 일별 추세'**.
  *
  * v3.93 변경 (2026-10-22)
  *  - **출고수량 '주요브랜드' 드롭다운 숨김**(renderTrendControls 조건을 `if (false && …)`로 비활성 — 거래처 드롭다운은 유지). 26신간 일별 추세로 대체.
@@ -958,8 +961,8 @@ function renderMonthlySales(ms) {
       ${closingBar}
       ${tableHtml}
       ${ms.note ? `<div class="sales-note">${escape(ms.note)}</div>` : ""}
-      ${buildTrendExpander()}
       ${buildNewItemExpander()}
+      ${buildTrendExpander()}
     </div>
   `;
 
@@ -2052,7 +2055,7 @@ function buildNewItemExpander() {
   return `
     <div class="trend-exp newitem-exp" id="newitem-exp">
       <div class="trend-head" id="newitem-head" role="button" tabindex="0" aria-expanded="false">
-        <b>🆕 26신간 일별 실적 추세</b>
+        <b>🆕 26신간 일별 추세</b>
         <span class="arrow">▼</span>
       </div>
       <div class="trend-body">
@@ -2075,7 +2078,7 @@ function bindNewItemExpander(scope) {
   if (newItemChart) { newItemChart.destroy(); newItemChart = null; }
   // 기본값 초기화
   newItemState.ch = "전체";
-  newItemState.code = NEWITEM_DAILY.items[0].code;
+  newItemState.code = "전체";
   newItemState.metric = "수량";
   let rendered = false;
   const head = exp.querySelector("#newitem-head");
@@ -2091,7 +2094,8 @@ function bindNewItemExpander(scope) {
       chSel.addEventListener("change", () => { newItemState.ch = chSel.value; renderNewItemChips(); renderNewItemChart(); });
       // 품목 드롭다운
       const itSel = exp.querySelector("#ni-item");
-      itSel.innerHTML = NEWITEM_DAILY.items.map(it => `<option value="${escape(it.code)}"${it.code === newItemState.code ? " selected" : ""}>${escape(it.name)}</option>`).join("");
+      const itOpts = [{ code: "전체", name: "전체" }].concat(NEWITEM_DAILY.items);
+      itSel.innerHTML = itOpts.map(it => `<option value="${escape(it.code)}"${it.code === newItemState.code ? " selected" : ""}>${escape(it.name)}</option>`).join("");
       itSel.addEventListener("change", () => { newItemState.code = itSel.value; renderNewItemChips(); renderNewItemChart(); });
       // 수량/매출 토글
       exp.querySelectorAll("#ni-metric button").forEach(b => b.addEventListener("click", () => {
@@ -2105,29 +2109,51 @@ function bindNewItemExpander(scope) {
   head.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
 }
 
-// 선택 품목의 x축(실적 있는 날 합집합, firstDate~end) + 채널별 값 맵
+// 선택 품목(코드) → 대상 품목코드 배열. '전체'면 전 품목.
+function newItemCodes(code) {
+  return code === "전체" ? (NEWITEM_DAILY.items || []).map(i => i.code) : [code];
+}
+// 선택 품목의 최초 납품일('전체'면 전 품목 중 가장 이른 날)
+function newItemFirst(code) {
+  const fd = NEWITEM_DAILY.firstDate || {};
+  if (code !== "전체") return fd[code] || "";
+  const all = newItemCodes(code).map(c => fd[c]).filter(Boolean).sort();
+  return all[0] || "";
+}
+// 선택 품목명('전체'면 '전체')
+function newItemName(code) {
+  if (code === "전체") return "전체";
+  const it = (NEWITEM_DAILY.items || []).find(i => i.code === code);
+  return it ? it.name : "";
+}
+
+// 선택 품목의 x축(실적 있는 날 합집합, firstDate~end)
 function newItemAxis(code) {
-  const ser = (NEWITEM_DAILY.series || {})[code] || {};
   const end = NEWITEM_DAILY.end || NEWITEM_END;
-  const first = (NEWITEM_DAILY.firstDate || {})[code] || "";
   const set = new Set();
-  Object.keys(ser).forEach(ch => (ser[ch] || []).forEach(r => {
-    const d = r[0];
-    if ((!first || d >= first) && d <= end) set.add(d);
-  }));
+  newItemCodes(code).forEach(c => {
+    const ser = (NEWITEM_DAILY.series || {})[c] || {};
+    const first = (NEWITEM_DAILY.firstDate || {})[c] || "";
+    Object.keys(ser).forEach(ch => (ser[ch] || []).forEach(r => {
+      const d = r[0];
+      if ((!first || d >= first) && d <= end) set.add(d);
+    }));
+  });
   return Array.from(set).sort();
 }
 
-// code+channel(또는 전체) → {날짜: [수량, 매출]} 맵
+// code(또는 '전체')+channel(또는 '전체') → {날짜: [수량, 매출]} 맵
 function newItemValueMap(code, ch) {
-  const ser = (NEWITEM_DAILY.series || {})[code] || {};
   const map = {};
   const add = rows => (rows || []).forEach(r => {
     const d = r[0]; if (!map[d]) map[d] = [0, 0];
     map[d][0] += r[1]; map[d][1] += r[2];
   });
-  if (ch === "전체") (NEWITEM_DAILY.channels || []).forEach(c => add(ser[c]));
-  else add(ser[ch]);
+  newItemCodes(code).forEach(c => {
+    const ser = (NEWITEM_DAILY.series || {})[c] || {};
+    if (ch === "전체") (NEWITEM_DAILY.channels || []).forEach(cc => add(ser[cc]));
+    else add(ser[ch]);
+  });
   return map;
 }
 
@@ -2135,7 +2161,7 @@ function renderNewItemChips() {
   const el = document.getElementById("newitem-chips");
   if (!el) return;
   const code = newItemState.code;
-  const item = (NEWITEM_DAILY.items || []).find(i => i.code === code);
+  const name = newItemName(code);
   const dates = newItemAxis(code);
   const vmap = newItemValueMap(code, newItemState.ch);
   const mi = newItemState.metric === "매출" ? 1 : 0;
@@ -2143,20 +2169,20 @@ function renderNewItemChips() {
   dates.forEach(d => { const v = (vmap[d] || [0, 0])[mi]; total += v; if (v) { lastV = v; lastD = d; } });
   const nf = n => Number(Math.round(n)).toLocaleString("ko-KR");
   const unit = newItemState.metric === "매출" ? "원" : "부";
-  const first = (NEWITEM_DAILY.firstDate || {})[code] || "-";
+  const first = newItemFirst(code) || "-";
   el.innerHTML =
     `<span class="t-chip">최초납품 ${escape(first.slice(5).replace("-", "/"))}</span>` +
     `<span class="t-chip up">누적 ${nf(total)}${unit}</span>` +
     (lastD ? `<span class="t-chip">최근(${escape(lastD.slice(5).replace("-", "/"))}) ${nf(lastV)}${unit}</span>` : "");
   const cap = document.getElementById("newitem-cap");
-  if (cap) cap.textContent = `${item ? item.name : ""} · 채널 ${newItemState.ch} · ${newItemState.metric} 기준 · 배본(같은날·동일품목 순수거래처 45곳 이상 납품) 제외 · ${first}~${NEWITEM_DAILY.end || NEWITEM_END}`;
+  if (cap) cap.textContent = `${name} · 채널 ${newItemState.ch} · ${newItemState.metric} 기준 · 배본(같은날·동일품목 순수거래처 45곳 이상 납품) 제외 · ${first}~${NEWITEM_DAILY.end || NEWITEM_END}`;
 }
 
 function renderNewItemChart() {
   const ctx = document.getElementById("newitem-cv");
   if (!ctx) return;
   const code = newItemState.code;
-  const item = (NEWITEM_DAILY.items || []).find(i => i.code === code);
+  const name = newItemName(code);
   const dates = newItemAxis(code);
   const vmap = newItemValueMap(code, newItemState.ch);
   const mi = newItemState.metric === "매출" ? 1 : 0;
@@ -2173,7 +2199,7 @@ function renderNewItemChart() {
     options: {
       responsive: true, maintainAspectRatio: false, layout: { padding: { top: 14 } },
       plugins: {
-        title: { display: true, text: `${item ? item.name : ""} · ${newItemState.ch} · 일별 ${newItemState.metric}`, color: "#243B53", font: { size: 13, weight: "600" } },
+        title: { display: true, text: `${name} · ${newItemState.ch} · 일별 ${newItemState.metric}`, color: "#243B53", font: { size: 13, weight: "600" } },
         legend: { display: false },
         tooltip: { callbacks: { label: c => `${c.dataset.label} ${f(c.parsed.y)}${unit}` } }
       },
