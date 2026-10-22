@@ -1,5 +1,9 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.92
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.93
+ *
+ * v3.93 변경 (2026-10-22)
+ *  - **출고수량 '주요브랜드' 드롭다운 숨김**(renderTrendControls 조건을 `if (false && …)`로 비활성 — 거래처 드롭다운은 유지). 26신간 일별 추세로 대체.
+ *  - **'🆕 26신간 일별 실적 추세' 섹션 신설**(추세 패널 아래 별도 접이식). [채널]·[품목] 드롭다운 + [수량]/[매출] 토글(기본 수량) + 일별 라인차트(2026년 단일 라인, YoY 아님). 데이터=trend-data.js NEWITEM_DAILY(손익센터 무관, 26신간 15개 품목, 문서구분 납품, 배본(같은날·동일품목 순수거래처 45곳 이상)인 당일 품목 제외). 채널=전체+지사(채널별거래처_출판 총판)/YES24·알라딘·쿠팡·교보·영풍(master (4분기)계획자료_온라인거래처 대표거래처 통합). x축=선택 품목 최초 납품일~2026-12-31 중 실적 있는 날(채널 합집합, MM/DD). **기능 자체가 2026-12-31까지만 노출**(newItemAvailable가 오늘>end면 섹션 미생성). 매출은 천원 단위 표기. style.css .ni-sel 추가. ※프론트 전용(Code.gs 변경 없음).
  *
  * v3.92 변경
  *  - 월별 매출현황 '계층형(C안 토글)' 렌더 추가 — 시트 개편(M10-W3~, Code.gs v3.23 hier=true) 대응. **팀·사업 2열 분리**(헤더 팀|사업, colgroup/헤더 hier 분기). 기본=팀/소계: 멀티 사업 팀은 **소계 행(팀▶ + 사업 '소계')=토글 부모**, 클릭 시 사업 품목 자식(빈 팀칸 + 사업명) 펼침/접힘(data-grp 매칭). **단일 사업 팀(영업전략팀=저작권/제작팀=리플릿/서비스기획1팀=NELT)=팀+사업 그대로 표시**(토글 없음). 합계·예상마감 행은 라벨 colspan=2. measCells/rowCells 분리. 테이블에 `sales-hier` 클래스 부여. ms.hier 아니면(구 평면 주차) 기존 1열 2단 렌더 그대로. **디자인 정돈(2026-10-21)**: 소계(토글) 행을 다크→**소프트 블루(#E9F1FB)**, **소계 글자색 #1F3A5F**(구 흰색 규칙 고특이도로 덮어 가시화), **소계 행을 사업(품목) 아래에 배치**(품목 자식 먼저→소계 하단 토글), 합계 바탕 #2E2A4D→**#1F5E92(브랜드 블루, 덜 튀게)**, 팀 열 nowrap, 팀|사업 구분선. style.css: .sales-hier .ms-parent/.ms-caret/.ms-child/.c-ms-item(들여쓰기)/.c-ms-biz·구분선·nowrap. Code.gs v3.23+ 재배포 필요.
@@ -955,6 +959,7 @@ function renderMonthlySales(ms) {
       ${tableHtml}
       ${ms.note ? `<div class="sales-note">${escape(ms.note)}</div>` : ""}
       ${buildTrendExpander()}
+      ${buildNewItemExpander()}
     </div>
   `;
 
@@ -981,6 +986,7 @@ function renderMonthlySales(ms) {
     });
   });
   bindTrendExpander(el);
+  bindNewItemExpander(el);
 }
 
 // (공통) — 합계행 비고 시트명 내용을 렌더. 셀 객체 그리드({v,rs,cs}|null=병합피복) 소비(구형 문자열 배열도 호환).
@@ -1857,7 +1863,7 @@ function renderTrendControls(exp) {
   // 우측 영역(#trend-legend): 출고수량 → ① 영어+전체채널=주요브랜드 드롭다운 ② (영어/B&G/OUP)+(오프라인/온라인)=거래처 드롭다운 ③ 그 외=비움. 총매출 → 기존 범례
   const lg = exp.querySelector("#trend-legend");
   if (lg) {
-    if (cfg.hasChannel && trendState.g === "영어" && trendState.ch === "전체" && typeof TREND_QTY_BRAND !== "undefined") {
+    if (false /* 주요브랜드 드롭다운 숨김(2026-10-22) — 26신간 일별 실적 추세로 대체 */ && cfg.hasChannel && trendState.g === "영어" && trendState.ch === "전체" && typeof TREND_QTY_BRAND !== "undefined") {
       const opts = ["선택", "전체"].concat(TREND_QTY_BRAND.brands || []);
       lg.innerHTML = '<span class="trend-brand"><label for="trend-brand-sel">주요브랜드</label><select id="trend-brand-sel">'
         + opts.map(o => `<option value="${escape(o)}"${o === trendState.brand ? ' selected' : ''}>${escape(o)}</option>`).join("")
@@ -2020,6 +2026,163 @@ function renderTrendChart() {
       { label: "2025", data: dv(y25), backgroundColor: "#D9A325", borderRadius: 3 }] },
       options: opts(cfg.titleBar), plugins: [trendValueLabels] });
   }
+}
+
+/* ============================================================
+ * 26신간 일별 실적 추세 — NEWITEM_DAILY + Chart.js 필요
+ *  · [채널] 드롭다운(전체+지사/YES24/알라딘/쿠팡/교보/영풍) × [품목] 드롭다운(26신간 15개)
+ *  · [수량]/[매출] 토글(기본 수량). 라인 1개(26년만, YoY 아님)
+ *  · x축 = 선택 품목 최초 납품일~2026-12-31 중 실적 있는 날(채널 합집합, MM/DD)
+ *  · 기능 자체가 2026-12-31까지만 노출(이후 숨김)
+ * ============================================================ */
+const NEWITEM_END = "2026-12-31";
+const newItemState = { ch: "전체", code: null, metric: "수량" };
+let newItemChart = null;
+
+function newItemAvailable() {
+  if (typeof NEWITEM_DAILY === "undefined" || typeof Chart === "undefined") return false;
+  // 기능 유지 기한: 2026-12-31까지만 노출
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const end = new Date((NEWITEM_DAILY.end || NEWITEM_END) + "T23:59:59");
+  return today <= end && Array.isArray(NEWITEM_DAILY.items) && NEWITEM_DAILY.items.length > 0;
+}
+
+function buildNewItemExpander() {
+  if (!newItemAvailable()) return "";
+  return `
+    <div class="trend-exp newitem-exp" id="newitem-exp">
+      <div class="trend-head" id="newitem-head" role="button" tabindex="0" aria-expanded="false">
+        <b>🆕 26신간 일별 실적 추세</b>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="trend-body">
+        <div class="trend-ctrl">
+          <div class="ni-sel"><label for="ni-ch">채널</label><select id="ni-ch"></select></div>
+          <div class="ni-sel"><label for="ni-item">품목</label><select id="ni-item"></select></div>
+          <div class="tseg tseg-nav" id="ni-metric"><button type="button" data-v="수량" class="on">수량</button><button type="button" data-v="매출">매출</button></div>
+        </div>
+        <div class="trend-chips" id="newitem-chips"></div>
+        <div class="trend-cw"><canvas id="newitem-cv"></canvas></div>
+        <div class="trend-cap" id="newitem-cap"></div>
+      </div>
+    </div>`;
+}
+
+function bindNewItemExpander(scope) {
+  if (!newItemAvailable()) return;
+  const exp = scope.querySelector("#newitem-exp");
+  if (!exp) return;
+  if (newItemChart) { newItemChart.destroy(); newItemChart = null; }
+  // 기본값 초기화
+  newItemState.ch = "전체";
+  newItemState.code = NEWITEM_DAILY.items[0].code;
+  newItemState.metric = "수량";
+  let rendered = false;
+  const head = exp.querySelector("#newitem-head");
+  const toggle = () => {
+    exp.classList.toggle("open");
+    head.setAttribute("aria-expanded", exp.classList.contains("open") ? "true" : "false");
+    if (exp.classList.contains("open") && !rendered) {
+      rendered = true;
+      // 채널 드롭다운(전체 + 정의된 채널)
+      const chSel = exp.querySelector("#ni-ch");
+      const chans = ["전체"].concat(NEWITEM_DAILY.channels || []);
+      chSel.innerHTML = chans.map(c => `<option value="${escape(c)}"${c === newItemState.ch ? " selected" : ""}>${escape(c)}</option>`).join("");
+      chSel.addEventListener("change", () => { newItemState.ch = chSel.value; renderNewItemChips(); renderNewItemChart(); });
+      // 품목 드롭다운
+      const itSel = exp.querySelector("#ni-item");
+      itSel.innerHTML = NEWITEM_DAILY.items.map(it => `<option value="${escape(it.code)}"${it.code === newItemState.code ? " selected" : ""}>${escape(it.name)}</option>`).join("");
+      itSel.addEventListener("change", () => { newItemState.code = itSel.value; renderNewItemChips(); renderNewItemChart(); });
+      // 수량/매출 토글
+      exp.querySelectorAll("#ni-metric button").forEach(b => b.addEventListener("click", () => {
+        exp.querySelectorAll("#ni-metric button").forEach(x => x.classList.remove("on")); b.classList.add("on");
+        newItemState.metric = b.dataset.v; renderNewItemChips(); renderNewItemChart();
+      }));
+      renderNewItemChips(); renderNewItemChart();
+    }
+  };
+  head.addEventListener("click", toggle);
+  head.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+}
+
+// 선택 품목의 x축(실적 있는 날 합집합, firstDate~end) + 채널별 값 맵
+function newItemAxis(code) {
+  const ser = (NEWITEM_DAILY.series || {})[code] || {};
+  const end = NEWITEM_DAILY.end || NEWITEM_END;
+  const first = (NEWITEM_DAILY.firstDate || {})[code] || "";
+  const set = new Set();
+  Object.keys(ser).forEach(ch => (ser[ch] || []).forEach(r => {
+    const d = r[0];
+    if ((!first || d >= first) && d <= end) set.add(d);
+  }));
+  return Array.from(set).sort();
+}
+
+// code+channel(또는 전체) → {날짜: [수량, 매출]} 맵
+function newItemValueMap(code, ch) {
+  const ser = (NEWITEM_DAILY.series || {})[code] || {};
+  const map = {};
+  const add = rows => (rows || []).forEach(r => {
+    const d = r[0]; if (!map[d]) map[d] = [0, 0];
+    map[d][0] += r[1]; map[d][1] += r[2];
+  });
+  if (ch === "전체") (NEWITEM_DAILY.channels || []).forEach(c => add(ser[c]));
+  else add(ser[ch]);
+  return map;
+}
+
+function renderNewItemChips() {
+  const el = document.getElementById("newitem-chips");
+  if (!el) return;
+  const code = newItemState.code;
+  const item = (NEWITEM_DAILY.items || []).find(i => i.code === code);
+  const dates = newItemAxis(code);
+  const vmap = newItemValueMap(code, newItemState.ch);
+  const mi = newItemState.metric === "매출" ? 1 : 0;
+  let total = 0, lastV = 0, lastD = "";
+  dates.forEach(d => { const v = (vmap[d] || [0, 0])[mi]; total += v; if (v) { lastV = v; lastD = d; } });
+  const nf = n => Number(Math.round(n)).toLocaleString("ko-KR");
+  const unit = newItemState.metric === "매출" ? "원" : "부";
+  const first = (NEWITEM_DAILY.firstDate || {})[code] || "-";
+  el.innerHTML =
+    `<span class="t-chip">최초납품 ${escape(first.slice(5).replace("-", "/"))}</span>` +
+    `<span class="t-chip up">누적 ${nf(total)}${unit}</span>` +
+    (lastD ? `<span class="t-chip">최근(${escape(lastD.slice(5).replace("-", "/"))}) ${nf(lastV)}${unit}</span>` : "");
+  const cap = document.getElementById("newitem-cap");
+  if (cap) cap.textContent = `${item ? item.name : ""} · 채널 ${newItemState.ch} · ${newItemState.metric} 기준 · 배본(같은날·동일품목 순수거래처 45곳 이상 납품) 제외 · ${first}~${NEWITEM_DAILY.end || NEWITEM_END}`;
+}
+
+function renderNewItemChart() {
+  const ctx = document.getElementById("newitem-cv");
+  if (!ctx) return;
+  const code = newItemState.code;
+  const item = (NEWITEM_DAILY.items || []).find(i => i.code === code);
+  const dates = newItemAxis(code);
+  const vmap = newItemValueMap(code, newItemState.ch);
+  const mi = newItemState.metric === "매출" ? 1 : 0;
+  const isAmt = newItemState.metric === "매출";
+  const div = isAmt ? 1000 : 1;                 // 매출은 천원 단위
+  const unit = isAmt ? "천원" : "부";
+  const labels = dates.map(d => d.slice(5).replace("-", "/"));
+  const data = dates.map(d => ((vmap[d] || [0, 0])[mi]) / div);
+  const f = n => Number(n).toLocaleString("ko-KR", { maximumFractionDigits: isAmt ? 1 : 0 });
+  if (newItemChart) { newItemChart.destroy(); newItemChart = null; }
+  newItemChart = new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets: [{ label: `2026 ${newItemState.metric}`, data, borderColor: "#1F5E92", backgroundColor: "#1F5E92", borderWidth: 2.2, tension: .25, pointRadius: labels.length > 40 ? 0 : 2.5, fill: false }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, layout: { padding: { top: 14 } },
+      plugins: {
+        title: { display: true, text: `${item ? item.name : ""} · ${newItemState.ch} · 일별 ${newItemState.metric}`, color: "#243B53", font: { size: 13, weight: "600" } },
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => `${c.dataset.label} ${f(c.parsed.y)}${unit}` } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+        y: { beginAtZero: true, ticks: { callback: v => f(v) + unit }, grid: { color: "#EDF2F7" } }
+      }
+    }
+  });
 }
 
 /* ============================================================
