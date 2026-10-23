@@ -1309,7 +1309,7 @@ a { color: inherit; text-decoration: none; }
 .ni-sel label{font-weight:700;color:var(--text-strong);}
 .ni-sel select{font:inherit;font-size:12px;padding:5px 9px;border:1px solid var(--border-strong);border-radius:8px;background:#fff;color:var(--text-strong);cursor:pointer;max-width:230px;}
 .t-chip.ni-c0{background:#FBF1D6;color:#8A6D1A;}
-.t-chip.ni-c1{background:#EEF0F3;color:#5A6472;}
+.t-chip.ni-c1{background:#FBE4E4;color:#C23232;}
 .t-chip.ni-c2{background:#E3EEF8;color:#1F5E92;}
 .trend-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;}
 .t-chip{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:8px;background:#EEF2F6;color:var(--text-soft);}

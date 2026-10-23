@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.95
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.96
+ *
+ * v3.96 변경 (2026-10-23)
+ *  - 26신간 추세 **26년(구) 추세선 색상 그레이(#8A94A6)→빨강(#D64545)**. 칩 .ni-c1도 빨강 톤. (25구 앰버·26신 블루 유지)
  *
  * v3.95 변경 (2026-10-23)
  *  - 26신간 추세 **단일 라인 → 3계열 YoY**로 전환: ①25년 8/1↑ (구)품목 ②26년 8/1↑ (구)품목 ③26년 8/1↑ (신)품목. x축=3계열 실적일 MM/DD 합집합(8/1~). 데이터 NEWITEM_DAILY 신구조(series[신코드][25old|26old|26new][채널], seriesKeys/seriesLabels/items.oldCode). 칩=계열별 누적(수량/매출 토글 적용), 색=25구 앰버(점선)·26구 그레이(점선)·26신 브랜드블루(실선). newItemValueMap(code,key,ch)/newItemAxis(code,ch)로 재작성. style.css .t-chip.ni-c0/1/2.
@@ -2175,7 +2178,7 @@ function renderNewItemChart() {
   const dates = newItemAxis(code, ch);
   const labels = dates.map(d => d.replace("-", "/"));
   const keys = newItemKeys(), lbs = newItemLabels();
-  const colors = ["#D9A325", "#8A94A6", "#1F5E92"];   // 25구(앰버)·26구(그레이)·26신(브랜드블루)
+  const colors = ["#D9A325", "#D64545", "#1F5E92"];   // 25구(앰버)·26구(빨강)·26신(브랜드블루)
   const dash = [[6, 4], [2, 3], []];
   const f = n => Number(n).toLocaleString("ko-KR", { maximumFractionDigits: isAmt ? 1 : 0 });
   const ds = keys.map((k, i) => {
