@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.94
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.95
+ *
+ * v3.95 변경 (2026-10-23)
+ *  - 26신간 추세 **단일 라인 → 3계열 YoY**로 전환: ①25년 8/1↑ (구)품목 ②26년 8/1↑ (구)품목 ③26년 8/1↑ (신)품목. x축=3계열 실적일 MM/DD 합집합(8/1~). 데이터 NEWITEM_DAILY 신구조(series[신코드][25old|26old|26new][채널], seriesKeys/seriesLabels/items.oldCode). 칩=계열별 누적(수량/매출 토글 적용), 색=25구 앰버(점선)·26구 그레이(점선)·26신 브랜드블루(실선). newItemValueMap(code,key,ch)/newItemAxis(code,ch)로 재작성. style.css .t-chip.ni-c0/1/2.
  *
  * v3.94 변경 (2026-10-22)
  *  - 26신간 추세: ①품목 드롭다운에 **'전체'** 추가(전 품목 합산, 기본값=전체/전체채널). newItemCodes/newItemFirst/newItemName 헬퍼로 axis·valueMap·칩·차트가 '전체' 지원. ②노출 순서 변경 — **26신간 추세를 기존 추세(총매출/출고수량) 패널 위로 이동**. ③헤더 문구 '26신간 일별 실적 추세'→**'26신간 일별 추세'**.
@@ -2113,95 +2116,88 @@ function bindNewItemExpander(scope) {
 function newItemCodes(code) {
   return code === "전체" ? (NEWITEM_DAILY.items || []).map(i => i.code) : [code];
 }
-// 선택 품목의 최초 납품일('전체'면 전 품목 중 가장 이른 날)
-function newItemFirst(code) {
-  const fd = NEWITEM_DAILY.firstDate || {};
-  if (code !== "전체") return fd[code] || "";
-  const all = newItemCodes(code).map(c => fd[c]).filter(Boolean).sort();
-  return all[0] || "";
-}
 // 선택 품목명('전체'면 '전체')
 function newItemName(code) {
   if (code === "전체") return "전체";
   const it = (NEWITEM_DAILY.items || []).find(i => i.code === code);
   return it ? it.name : "";
 }
+// 3계열 키/라벨
+function newItemKeys() { return NEWITEM_DAILY.seriesKeys || ["25old", "26old", "26new"]; }
+function newItemLabels() { return NEWITEM_DAILY.seriesLabels || ["25년(구)", "26년(구)", "26년(신)"]; }
 
-// 선택 품목의 x축(실적 있는 날 합집합, firstDate~end)
-function newItemAxis(code) {
-  const end = NEWITEM_DAILY.end || NEWITEM_END;
-  const set = new Set();
-  newItemCodes(code).forEach(c => {
-    const ser = (NEWITEM_DAILY.series || {})[c] || {};
-    const first = (NEWITEM_DAILY.firstDate || {})[c] || "";
-    Object.keys(ser).forEach(ch => (ser[ch] || []).forEach(r => {
-      const d = r[0];
-      if ((!first || d >= first) && d <= end) set.add(d);
-    }));
-  });
-  return Array.from(set).sort();
-}
-
-// code(또는 '전체')+channel(또는 '전체') → {날짜: [수량, 매출]} 맵
-function newItemValueMap(code, ch) {
+// (code,seriesKey,channel) → {MM-DD: [수량, 매출]} 맵. code/ch '전체'면 합산.
+function newItemValueMap(code, key, ch) {
   const map = {};
   const add = rows => (rows || []).forEach(r => {
     const d = r[0]; if (!map[d]) map[d] = [0, 0];
     map[d][0] += r[1]; map[d][1] += r[2];
   });
   newItemCodes(code).forEach(c => {
-    const ser = (NEWITEM_DAILY.series || {})[c] || {};
+    const ser = ((NEWITEM_DAILY.series || {})[c] || {})[key] || {};
     if (ch === "전체") (NEWITEM_DAILY.channels || []).forEach(cc => add(ser[cc]));
     else add(ser[ch]);
   });
   return map;
 }
+// 선택 품목+채널의 x축(3계열 실적일 MM-DD 합집합, 8/1~ 정렬)
+function newItemAxis(code, ch) {
+  const set = new Set();
+  newItemKeys().forEach(k => { const m = newItemValueMap(code, k, ch); Object.keys(m).forEach(d => set.add(d)); });
+  return Array.from(set).sort();
+}
 
 function renderNewItemChips() {
   const el = document.getElementById("newitem-chips");
   if (!el) return;
-  const code = newItemState.code;
-  const name = newItemName(code);
-  const dates = newItemAxis(code);
-  const vmap = newItemValueMap(code, newItemState.ch);
+  const code = newItemState.code, ch = newItemState.ch;
   const mi = newItemState.metric === "매출" ? 1 : 0;
-  let total = 0, lastV = 0, lastD = "";
-  dates.forEach(d => { const v = (vmap[d] || [0, 0])[mi]; total += v; if (v) { lastV = v; lastD = d; } });
-  const nf = n => Number(Math.round(n)).toLocaleString("ko-KR");
   const unit = newItemState.metric === "매출" ? "원" : "부";
-  const first = newItemFirst(code) || "-";
-  el.innerHTML =
-    `<span class="t-chip">최초납품 ${escape(first.slice(5).replace("-", "/"))}</span>` +
-    `<span class="t-chip up">누적 ${nf(total)}${unit}</span>` +
-    (lastD ? `<span class="t-chip">최근(${escape(lastD.slice(5).replace("-", "/"))}) ${nf(lastV)}${unit}</span>` : "");
+  const nf = n => Number(Math.round(n)).toLocaleString("ko-KR");
+  const keys = newItemKeys(), labels = newItemLabels();
+  el.innerHTML = keys.map((k, i) => {
+    const m = newItemValueMap(code, k, ch);
+    let s = 0; Object.keys(m).forEach(d => s += m[d][mi]);
+    return `<span class="t-chip ni-c${i}">${escape(labels[i])} ${nf(s)}${unit}</span>`;
+  }).join("");
   const cap = document.getElementById("newitem-cap");
-  if (cap) cap.textContent = `${name} · 채널 ${newItemState.ch} · ${newItemState.metric} 기준 · 배본(같은날·동일품목 순수거래처 45곳 이상 납품) 제외 · ${first}~${NEWITEM_DAILY.end || NEWITEM_END}`;
+  if (cap) cap.textContent = `${newItemName(code)} · 채널 ${ch} · ${newItemState.metric} 기준 · 8/1~ · YoY(①25년 구품목 ②26년 구품목 ③26년 신품목) · 배본(같은날·동일품목 순수거래처 45곳↑) 제외`;
 }
 
 function renderNewItemChart() {
   const ctx = document.getElementById("newitem-cv");
   if (!ctx) return;
-  const code = newItemState.code;
-  const name = newItemName(code);
-  const dates = newItemAxis(code);
-  const vmap = newItemValueMap(code, newItemState.ch);
+  const code = newItemState.code, ch = newItemState.ch;
   const mi = newItemState.metric === "매출" ? 1 : 0;
   const isAmt = newItemState.metric === "매출";
   const div = isAmt ? 1000 : 1;                 // 매출은 천원 단위
   const unit = isAmt ? "천원" : "부";
-  const labels = dates.map(d => d.slice(5).replace("-", "/"));
-  const data = dates.map(d => ((vmap[d] || [0, 0])[mi]) / div);
+  const dates = newItemAxis(code, ch);
+  const labels = dates.map(d => d.replace("-", "/"));
+  const keys = newItemKeys(), lbs = newItemLabels();
+  const colors = ["#D9A325", "#8A94A6", "#1F5E92"];   // 25구(앰버)·26구(그레이)·26신(브랜드블루)
+  const dash = [[6, 4], [2, 3], []];
   const f = n => Number(n).toLocaleString("ko-KR", { maximumFractionDigits: isAmt ? 1 : 0 });
+  const ds = keys.map((k, i) => {
+    const m = newItemValueMap(code, k, ch);
+    return {
+      label: lbs[i],
+      data: dates.map(d => ((m[d] || [0, 0])[mi]) / div),
+      borderColor: colors[i], backgroundColor: colors[i],
+      borderWidth: i === 2 ? 2.4 : 1.8, borderDash: dash[i],
+      tension: .25, pointRadius: labels.length > 40 ? 0 : 2, fill: false, spanGaps: true
+    };
+  });
   if (newItemChart) { newItemChart.destroy(); newItemChart = null; }
   newItemChart = new Chart(ctx, {
     type: "line",
-    data: { labels, datasets: [{ label: `2026 ${newItemState.metric}`, data, borderColor: "#1F5E92", backgroundColor: "#1F5E92", borderWidth: 2.2, tension: .25, pointRadius: labels.length > 40 ? 0 : 2.5, fill: false }] },
+    data: { labels, datasets: ds },
     options: {
       responsive: true, maintainAspectRatio: false, layout: { padding: { top: 14 } },
       plugins: {
-        title: { display: true, text: `${name} · ${newItemState.ch} · 일별 ${newItemState.metric}`, color: "#243B53", font: { size: 13, weight: "600" } },
-        legend: { display: false },
-        tooltip: { callbacks: { label: c => `${c.dataset.label} ${f(c.parsed.y)}${unit}` } }
+        title: { display: true, text: `${newItemName(code)} · ${ch} · 일별 ${newItemState.metric} (8/1~ YoY)`, color: "#243B53", font: { size: 13, weight: "600" } },
+        legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } },
+        tooltip: { mode: "index", intersect: false, callbacks: { label: c => `${c.dataset.label} ${f(c.parsed.y)}${unit}` } }
       },
       scales: {
         x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
