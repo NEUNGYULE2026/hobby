@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.96
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.97
+ *
+ * v3.97 변경 (2026-11-12)
+ *  - 월별 매출현황(2단/계층) **표기 규칙 추가**(measCells): ①한 쪽(목표/실적)의 총출고·반품이 모두 '-'면 **순매출도 '-'**(netC) ②목표·실적(총출고·반품)이 모두 '-'면 **진척율도 '-'**(pctZ) ③값 0.00·진척율 0.0%는 **'-'**(dz, |v|<0.005 / |%|<0.05). fmt2/fmtPct 대신 dz/netC/pctZ 사용(2단·계층·합계·예상마감 공통). 집계/데이터 무관, 표시만. 구 1단 레이아웃은 미사용이라 그대로.
  *
  * v3.96 변경 (2026-10-23)
  *  - 26신간 추세 **26년(구) 추세선 색상 그레이(#8A94A6)→빨강(#D64545)**. 칩 .ni-c1도 빨강 톤. (25구 앰버·26신 블루 유지)
@@ -849,10 +852,17 @@ function renderMonthlySales(ms) {
   let tableHtml;
   if (twoTier) {
     // 신 2단: 팀/파트 | 목표(총출고·반품·순매출액) | 실적(총출고·반품·순매출액) | 진척율 | 증감사유
+    // 표기 규칙(2026-11-12): ① 총출고·반품 모두 '-'면 순매출도 '-' ② 목표·실적(총출고·반품) 모두 '-'면 진척율도 '-' ③ 값 0.00·진척율 0.0%는 '-'
+    const dz = v => (v == null || Math.abs(Number(v)) < 0.005) ? "-" : Number(v).toFixed(2);           // 0.00/빈값 → '-'
+    const netC = (sh, rt, nv) => (sh == null && rt == null) ? "-" : dz(nv);                            // 총출고·반품 모두 빈값 → 순매출 '-'
+    const sideEmpty = (sh, rt) => (sh == null && rt == null);
+    const pctZ = o => (sideEmpty(o.targetShipped, o.targetReturns) && sideEmpty(o.shipped, o.returns)) ? "-"   // 목표·실적 모두 빈값 → '-'
+      : (o.progress == null || Math.abs(Number(o.progress) * 100) < 0.05) ? "-"                        // 0.0% → '-'
+      : `${(Number(o.progress) * 100).toFixed(1)}%`;
     const measCells = (o, pcls) =>
-      `<td class="num tgt gsep">${fmt2(o.targetShipped)}</td><td class="num tgt">${fmt2(o.targetReturns)}</td><td class="num tgt">${fmt2(o.targetNet)}</td>`
-      + `<td class="num gsep">${fmt2(o.shipped)}</td><td class="num">${fmt2(o.returns)}</td><td class="num">${fmt2(o.net)}</td>`
-      + `<td class="num gsep ${pcls}">${fmtPct(o.progress)}</td>`;
+      `<td class="num tgt gsep">${dz(o.targetShipped)}</td><td class="num tgt">${dz(o.targetReturns)}</td><td class="num tgt">${netC(o.targetShipped, o.targetReturns, o.targetNet)}</td>`
+      + `<td class="num gsep">${dz(o.shipped)}</td><td class="num">${dz(o.returns)}</td><td class="num">${netC(o.shipped, o.returns, o.net)}</td>`
+      + `<td class="num gsep ${pcls}">${pctZ(o)}</td>`;
     const rowCells = (o, pcls) => `<td>${escape(o.label)}</td>` + measCells(o, pcls);
     let body;
     if (ms.hier) {
