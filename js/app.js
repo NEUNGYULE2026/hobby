@@ -1,5 +1,8 @@
 /**
- * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.97
+ * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.98
+ *
+ * v3.98 변경 (2026-11-12)
+ *  - 매출현황 비고 팝업(openReasonModal) **URL 이미지 지원**: 비고에 http(s) URL이 있으면 해당 URL을 `<img class="reason-img">`로 렌더하고, 이미지 onload 시 자연 크기(뷰포트 88% 한도)에 맞춰 **팝업 폭 자동 조절**(box 인라인 width, .has-image). URL 외 텍스트는 캡션으로 상단 표시. 로드 실패 시 링크 폴백. 박스 재사용 대비 매 호출 시 has-image/인라인폭 리셋. style.css .reason-img/.has-image. (돋보기 노출·클릭 동작은 기존과 동일)
  *
  * v3.97 변경 (2026-11-12)
  *  - 월별 매출현황(2단/계층) **표기 규칙 추가**(measCells): ①한 쪽(목표/실적)의 총출고·반품이 모두 '-'면 **순매출도 '-'**(netC) ②목표·실적(총출고·반품)이 모두 '-'면 **진척율도 '-'**(pctZ) ③값 0.00·진척율 0.0%는 **'-'**(dz, |v|<0.005 / |%|<0.05). fmt2/fmtPct 대신 dz/netC/pctZ 사용(2단·계층·합계·예상마감 공통). 집계/데이터 무관, 표시만. 구 1단 레이아웃은 미사용이라 그대로.
@@ -1145,14 +1148,48 @@ function openReasonModal(text, extraHTML, titleOverride) {
   }
   // 제목: 기본 '(증감)주요내역', 호출 시 titleOverride로 교체(예 '(8월) 마감 실적')
   modal.querySelector('.reason-modal-title').textContent = titleOverride || '(증감)주요내역';
+  const box = modal.querySelector('.reason-modal-box');
+  const bodyEl = modal.querySelector('.reason-modal-body');
+  // 모달 박스 상태 초기화(재사용되므로 이미지/폭 클래스·인라인 폭 리셋)
+  box.classList.remove('has-image');
+  box.style.width = '';
+  // 비고에 http(s) URL이 있으면 → 해당 URL 이미지를 팝업으로 표시(이미지 크기에 맞춰 팝업 자동 리사이즈)
+  const urls = String(text || "").match(/https?:\/\/[^\s<>"'\]\)]+/g) || [];
+  if (urls.length) {
+    const caption = escape(String(text || "").replace(/https?:\/\/[^\s<>"'\]\)]+/g, '').trim());
+    bodyEl.innerHTML =
+      (caption ? `<div class="reason-text">${caption}</div>` : '') +
+      urls.map(u => `<img class="reason-img" src="${escape(u)}" alt="첨부 이미지" data-url="${escape(u)}">`).join('') +
+      (extraHTML || '');
+    box.classList.add('has-image');
+    box.classList.remove('has-common');
+    // 이미지 로드 시 자연 크기에 맞춰 팝업 폭 자동 조절(뷰포트 한도 내)
+    let maxw = 0;
+    bodyEl.querySelectorAll('img.reason-img').forEach(img => {
+      img.onload = () => {
+        const padH = 36, head = 52;                                    // body 좌우 패딩 + 헤더 높이
+        const availW = Math.min(window.innerWidth - 40, 1400) - padH;
+        const availH = window.innerHeight * 0.88 - head - padH;
+        const nw = img.naturalWidth || 0, nh = img.naturalHeight || 0;
+        if (!nw || !nh) return;
+        const scale = Math.min(1, availW / nw, availH / nh);
+        img.style.width = Math.round(nw * scale) + 'px';
+        maxw = Math.max(maxw, Math.round(nw * scale) + padH);
+        box.style.width = maxw + 'px';
+      };
+      img.onerror = () => { img.outerHTML = `<div class="reason-text">이미지를 불러오지 못했습니다: <a href="${escape(img.dataset.url)}" target="_blank" rel="noopener">${escape(img.dataset.url)}</a></div>`; };
+    });
+    modal.classList.add('open');
+    return;
+  }
   // 텍스트: HTML 이스케이프 후 (지사)/(총판)/(공통) 접두어만 볼드(개행은 white-space:pre-wrap가 렌더). extraHTML(공통 표)은 그 아래에.
   const boldText = escape(text || "")
     .replace(/\((중고등-지사|ELT-총판|공통)\)/g, '<strong>($1)</strong>')
     .replace(/^\[([^\]\n]+)\]/gm, '<strong>[$1]</strong>');   // 예상마감 개별 팀/파트 팝업의 '[팀/파트명]' 접두어 볼드
-  modal.querySelector('.reason-modal-body').innerHTML =
+  bodyEl.innerHTML =
     (boldText ? `<div class="reason-text">${boldText}</div>` : '') + (extraHTML || '');
   // (공통) 표가 있으면 모달 폭 확장(표 잘림 방지)
-  modal.querySelector('.reason-modal-box').classList.toggle('has-common', !!extraHTML);
+  box.classList.toggle('has-common', !!extraHTML);
   modal.classList.add('open');
 }
 
