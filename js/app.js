@@ -21,7 +21,7 @@
  *  - **'🆕 26신간 일별 실적 추세' 섹션 신설**(추세 패널 아래 별도 접이식). [채널]·[품목] 드롭다운 + [수량]/[매출] 토글(기본 수량) + 일별 라인차트(2026년 단일 라인, YoY 아님). 데이터=trend-data.js NEWITEM_DAILY(손익센터 무관, 26신간 15개 품목, 문서구분 납품, 배본(같은날·동일품목 순수거래처 45곳 이상)인 당일 품목 제외). 채널=전체+지사(채널별거래처_출판 총판)/YES24·알라딘·쿠팡·교보·영풍(master (4분기)계획자료_온라인거래처 대표거래처 통합). x축=선택 품목 최초 납품일~2026-12-31 중 실적 있는 날(채널 합집합, MM/DD). **기능 자체가 2026-12-31까지만 노출**(newItemAvailable가 오늘>end면 섹션 미생성). 매출은 천원 단위 표기. style.css .ni-sel 추가. ※프론트 전용(Code.gs 변경 없음).
  *
  * v3.92 변경
- *  - 월별 매출현황 '계층형(C안 토글)' 렌더 추가 — 시트 개편(M10-W3~, Code.gs v3.23 hier=true) 대응. **팀·사업 2열 분리**(헤더 팀|사업, colgroup/헤더 hier 분기). 기본=팀/소계: 멀티 사업 팀은 **소계 행(팀▶ + 사업 '소계')=토글 부모**, 클릭 시 사업 품목 자식(빈 팀칸 + 사업명) 펼침/접힘(data-grp 매칭). **단일 사업 팀(영업전략팀=저작권/제작팀=리플릿/서비스기획1팀=NELT)=팀+사업 그대로 표시**(토글 없음). 합계·예상마감 행은 라벨 colspan=2. measCells/rowCells 분리. 테이블에 `sales-hier` 클래스 부여. ms.hier 아니면(구 평면 주차) 기존 1열 2단 렌더 그대로. **디자인 정돈(2026-10-21)**: 소계(토글) 행을 다크→**소프트 블루(#E9F1FB)**, **소계 글자색 #1F3A5F**(구 흰색 규칙 고특이도로 덮어 가시화), **소계 행을 사업(품목) 아래에 배치**(품목 자식 먼저→소계 하단 토글), 합계 바탕 #2E2A4D→**#1F5E92(브랜드 블루, 덜 튀게)**, 팀 열 nowrap, 팀|사업 구분선. style.css: .sales-hier .ms-parent/.ms-caret/.ms-child/.c-ms-item(들여쓰기)/.c-ms-biz·구분선·nowrap. Code.gs v3.23+ 재배포 필요.
+ *  - 월별 매출현황 '계층형(C안 토글)' 렌더 추가 — 시트 개편(M10-W3~, Code.gs v3.23 hier=true) 대응. **팀·사업 2열 분리**(헤더 팀|사업, colgroup/헤더 hier 분기). 기본=팀/소계: 멀티 사업 팀은 **소계 행(팀▶ + 사업 '소계')=토글 부모**, 클릭 시 사업 품목 자식(빈 팀칸 + 사업명) 펼침/접힘(data-grp 매칭). **단일 사업 팀(영업전략팀=저작권/제작팀=리플릿/서비스기획1팀=NELT)=팀+사업 그대로 표시**(토글 없음). 합계·예상마감 행은 라벨 colspan=2. measCells/rowCells 분리. 테이블에 `sales-hier` 클래스 부여. ms.hier 아니면(구 평면 주차) 기존 1열 2단 렌더 그대로. **디자인 정돈(2026-10-21)**: 소계(토글) 행을 다크→**소프트 블루(#E9F1FB)**, **소계 글자색 #1F3A5F**(구 흰색 규칙 고특이도로 덮어 가시화), **소계 행을 사업(품목) 위에 고정**(소계 먼저→클릭 시 아래로 품목 펼침, 2026-11-19 변경), 합계 바탕 #2E2A4D→**#1F5E92(브랜드 블루, 덜 튀게)**, 팀 열 nowrap, 팀|사업 구분선. style.css: .sales-hier .ms-parent/.ms-caret/.ms-child/.c-ms-item(들여쓰기)/.c-ms-biz·구분선·nowrap. Code.gs v3.23+ 재배포 필요.
  *
  * v3.91 변경
  *  - 마감 실적 버튼·팝업 타이틀을 **호출 시트명 그대로**(ms.closingSheet) 표시로 변경(예 비고 셀에 '9월 가마감' → 버튼·제목 '9월 가마감'). closingSheet 없을 때만 '실적 요약' 폴백. 버튼은 escape, 팝업 제목은 openReasonModal textContent. Code.gs 변경 없음(closingSheet 기존 반환값 사용).
@@ -876,9 +876,9 @@ function renderMonthlySales(ms) {
       order.forEach(g => {
         const grp = byTeam[g], sub = grp.find(r => r.type === 'subtotal'), items = grp.filter(r => r.type === 'item');
         if (sub) {
-          // 멀티 사업 팀: 사업(품목) 자식 행 먼저(기본 숨김) → 소계(토글 부모)를 사업 영역 '아래'에 배치. 소계 클릭 시 위쪽 품목 펼침/접힘.
-          items.forEach(it => { body += `<tr class="ms-child" data-grp="${escape(g)}" hidden><td class="c-ms-team2"></td><td class="c-ms-item">${escape(it.label)}</td>${measCells(it, '')}${reasonCell(it.remark, false, it.label)}</tr>`; });
+          // 멀티 사업 팀: 소계(토글 부모)를 위에 고정 → 사업(품목) 자식 행(기본 숨김)을 그 '아래'에 배치. 소계 클릭 시 아래로 품목 펼침/접힘.
           body += `<tr class="subtotal ms-parent" data-grp="${escape(g)}"><td class="c-ms-tgl"><span class="ms-caret" aria-hidden="true">▶</span>${escape(g)}</td><td class="c-ms-biz">소계</td>${measCells(sub, '')}${reasonCell(sub.remark, false, g)}</tr>`;
+          items.forEach(it => { body += `<tr class="ms-child" data-grp="${escape(g)}" hidden><td class="c-ms-team2"></td><td class="c-ms-item">${escape(it.label)}</td>${measCells(it, '')}${reasonCell(it.remark, false, it.label)}</tr>`; });
         } else {
           // 단일 사업 팀: [팀] [사업] 그대로
           items.forEach(it => { body += `<tr class="normal"><td>${escape(g)}</td><td class="c-ms-biz">${escape(it.label)}</td>${measCells(it, '')}${reasonCell(it.remark, false, it.label)}</tr>`; });
