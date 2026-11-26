@@ -35,6 +35,7 @@
  * v3.45 — 월별 매출현황 계층형(.sales-hier) 소계 토글/소프트블루·가시화·합계색 정돈
  * v3.46 — 26신간 일별 실적 추세 섹션 드롭다운 스타일(.ni-sel) 추가(2026-10-22)
  * v3.48 — 비고 팝업 URL 이미지(.reason-img)·이미지 크기 맞춤 팝업(.reason-modal-box.has-image) (2026-11-12)
+ * v3.49 — 마감예상/공통 팝업 표 셀 정렬: .dash(실적없음 '-' 우측+여백)·.lbl-l(상단 구분 좌측들여쓰기)·.lbl-c(하단 구분 중앙) (2026-11-26)
  * v3.16 — KPI 카드 flex 세로 구조(같은 줄 높이 통일 + 하단 배지/버튼 정렬)
  * v3.17 — 텍스트형 KPI 달성율 컴팩트 인라인 미니바(.kpi-trate)
  * v3.18 — 달성율 미니바 여백 축소(실적 바로 아래로 올림)
@@ -1107,6 +1108,9 @@ a { color: inherit; text-decoration: none; }
 .reason-common-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .reason-common-table th.num { font-variant-numeric: tabular-nums; }      /* 헤더는 숫자여도 중앙 유지 */
 .reason-common-table td.mg, .reason-common-table th.mg { text-align: center; vertical-align: middle; }  /* 병합 셀: 상하좌우 중앙 정렬 */
+.reason-common-table td.dash { text-align: right; padding-right: 1.0em; font-variant-numeric: tabular-nums; }  /* 실적 없음('-') → 우측 정렬+여백(≈3칸) */
+.reason-common-table td.lbl-l { text-align: left; padding-left: 1.6em; }      /* (상단 마감예상) 합계 위 구분 → 좌측+들여쓰기(≈5칸) */
+.reason-common-table td.lbl-c { text-align: center; }                         /* (하단 주요사업상세) 구분 → 중앙 정렬 */
 .reason-common-table tbody tr.sum-row { font-weight: 700; background: #f7f9fc; }  /* '합계'류 행 전부 볼드+배경(중고등/B&G/OUP 합계 동일) */
 .reason-common-table tbody tr.sum-row td:not(.num) { text-align: center; }  /* 합계 행 텍스트(라벨) 중앙 정렬 */
 .reason-common-text { white-space: pre-wrap; word-break: keep-all; font-size: 13px; line-height: 1.6; color: var(--text-main); }
