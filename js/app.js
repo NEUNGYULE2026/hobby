@@ -2,7 +2,7 @@
  * 채널마케팅본부 주간 대시보드 — 프론트엔드 v3.99
  *
  * v3.99 변경 (2026-11-26)
- *  - 마감예상/공통 팝업 표(buildCommonContent) **셀 정렬 규칙 추가**: ①세로병합 없는 표(마감예상 '상단')는 **합계 행 이전 내역 행의 1열 구분 → 좌측+들여쓰기(td.lbl-l, ≈5칸)** ②세로병합 있는 표(주요사업상세 '하단')는 **구분 텍스트 셀 → 중앙(td.lbl-c)**, 그룹 병합셀은 기존 .mg 중앙 ③**값이 '-'(실적없음) → 우측+여백(td.dash, ≈3칸)**. renderTable에 vmerge/detail(합계 이전) 판정 추가. style.css v3.49 .dash/.lbl-l/.lbl-c. 데이터·집계 무관(표시만). ※월별 매출현황 계층형 소계 상단 순서(2026-11-19 타담당자 수정)는 그대로 유지.
+ *  - 마감예상/공통 팝업 표(buildCommonContent) **셀 정렬 규칙 추가**: ①세로병합 없는 표(마감예상 '상단')는 **합계 행 이전 내역 행의 구분(=행 첫 텍스트 셀, 병합 cs>1·선두 빈 열 무관) → 좌측+들여쓰기(td.lbl-l, ≈5칸)** ②세로병합 있는 표(주요사업상세 '하단')는 **구분 텍스트 셀 → 중앙(td.lbl-c)**, 그룹 병합셀 포함 ③**값이 '-'(실적없음) → 우측+여백(td.dash, ≈3칸)**. ⚠️구분 셀이 colspan=2 병합이라 '병합→중앙'보다 '구분(첫 텍스트셀)→좌측' 판정을 **우선**해야 함(labelDone 플래그). renderTable vmerge/detail 판정. style.css v3.49 .dash/.lbl-l/.lbl-c. 데이터·집계 무관(표시만). ※월별 매출현황 계층형 소계 상단 순서(2026-11-19 타담당자 수정) 그대로 유지.
  *
  * v3.98 변경 (2026-11-12)
  *  - 매출현황 비고 팝업(openReasonModal) **URL 이미지 지원**: 비고에 http(s) URL이 있으면 해당 URL을 `<img class="reason-img">`로 렌더하고, 이미지 onload 시 자연 크기(뷰포트 88% 한도)에 맞춰 **팝업 폭 자동 조절**(box 인라인 width, .has-image). URL 외 텍스트는 캡션으로 상단 표시. 로드 실패 시 링크 폴백. 박스 재사용 대비 매 호출 시 has-image/인라인폭 리셋. style.css .reason-img/.has-image. (돋보기 노출·클릭 동작은 기존과 동일)
@@ -1083,21 +1083,24 @@ function buildCommonContent(grid, noLabel) {
     // 이 표에 세로병합(그룹 구분)이 있는지 → '주요 사업 상세'류(하단) 판별. 있으면 구분 텍스트 중앙, 없으면(마감예상류 상단) 합계 위 구분 좌측+들여쓰기.
     const vmerge = rows.some(r => r.some(c => c && c.rs > 1));
     // cls 규칙(td): ① v==='-'(실적없음) → 우측+여백(dash) ② 병합 → 중앙(mg) ③ 숫자 → 우측(num) ④ 그룹표(하단) 텍스트 → 중앙(lbl-c) ⑤ 비그룹표(상단) 합계 위 1열 텍스트 → 좌측+들여쓰기(lbl-l)
-    const tr = (r, tag, rowCls, detail) => `<tr${rowCls ? ` class="${rowCls}"` : ''}>` + r.map((c, j) => {
+    const tr = (r, tag, rowCls, detail) => {
+      let labelDone = false;   // 행의 '첫 텍스트 셀'(=구분) 1회만 처리 — 선두 빈 열이 있어도 구분을 정확히 지목
+      return `<tr${rowCls ? ` class="${rowCls}"` : ''}>` + r.map((c, j) => {
       if (c === null) return '';                      // 병합 피복 → 스킵(HTML rowspan/colspan로 표현)
       const merged = c.rs > 1 || c.cs > 1;
+      const isText = c.v !== '' && c.v !== '-' && !numRe(c.v);
       let k = '';
       if (tag === 'td') {
-        if (c.v === '-') k = 'dash';
-        else if (merged) k = 'mg';
-        else if (numRe(c.v)) k = 'num';
-        else if (vmerge) k = 'lbl-c';
-        else if (detail && j === 0) k = 'lbl-l';
+        if (c.v === '-') k = 'dash';                                        // 실적없음 '-' → 우측+여백
+        else if (vmerge) k = numRe(c.v) ? 'num' : (c.v === '' ? '' : 'lbl-c'); // 하단 그룹표: 숫자 우측, 구분/병합 텍스트 중앙
+        else if (detail && isText && !labelDone) { k = 'lbl-l'; labelDone = true; } // 상단 비그룹표: 합계 위 구분(행 첫 텍스트셀, 병합 cs>1 포함) 좌측+들여쓰기
+        else if (merged) k = 'mg';                                          // 그 외 병합 → 중앙
+        else if (numRe(c.v)) k = 'num';                                     // 숫자 → 우측
       } else { k = merged ? 'mg' : (numRe(c.v) ? 'num' : ''); }   // 헤더: 기존 유지(숫자여도 중앙)
       const cls = k ? ` class="${k}"` : '';
       const span = (c.rs > 1 ? ` rowspan="${c.rs}"` : '') + (c.cs > 1 ? ` colspan="${c.cs}"` : '');
       return `<${tag}${cls}${span}>${escape(c.v)}</${tag}>`;
-    }).join('') + '</tr>';
+    }).join('') + '</tr>'; };
     const head = rows.slice(0, headerCount).map(r => tr(r, 'th', '', false)).join('');
     let sumSeen = false;
     const body = rows.slice(headerCount).map(r => {
